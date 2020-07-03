@@ -1,0 +1,935 @@
+------------------------------------------------------------
+cfg.__dict__
+{'base_lr': 0.0002,
+ 'ckpt_file': 'exp/train/market1501/lcs_1_not_nf_margin_0.3_lr_0.0002_exp_decay_at_151_total_300/run1/ckpt.pth',
+ 'crop_prob': 0,
+ 'crop_ratio': 1,
+ 'dataset': 'market1501',
+ 'epochs_per_val': 5,
+ 'exp_decay_at_epoch': 151,
+ 'exp_dir': 'exp/train/market1501/lcs_1_not_nf_margin_0.3_lr_0.0002_exp_decay_at_151_total_300/run1',
+ 'ids_per_batch': 32,
+ 'im_mean': [0.486, 0.459, 0.408],
+ 'im_std': [0.229, 0.224, 0.225],
+ 'ims_per_id': 4,
+ 'last_conv_stride': 1,
+ 'log_to_file': True,
+ 'lr_decay_type': 'exp',
+ 'margin': 0.3,
+ 'model_weight_file': '',
+ 'normalize_feature': False,
+ 'only_test': False,
+ 'prefetch_threads': 2,
+ 'resize_h_w': (256, 128),
+ 'resume': False,
+ 'run': 1,
+ 'scale_im': True,
+ 'seed': None,
+ 'staircase_decay_at_epochs': (101, 201),
+ 'staircase_decay_multiply_factor': 0.1,
+ 'stderr_file': 'exp/train/market1501/lcs_1_not_nf_margin_0.3_lr_0.0002_exp_decay_at_151_total_300/run1/stderr_2018-01-25_03:46:12.txt',
+ 'stdout_file': 'exp/train/market1501/lcs_1_not_nf_margin_0.3_lr_0.0002_exp_decay_at_151_total_300/run1/stdout_2018-01-25_03:46:12.txt',
+ 'steps_per_log': 10000000000.0,
+ 'sys_device_ids': (0, 1),
+ 'test_batch_size': 32,
+ 'test_final_batch': True,
+ 'test_mirror_type': None,
+ 'test_set_kwargs': {'batch_dims': 'NCHW',
+                     'batch_size': 32,
+                     'final_batch': True,
+                     'im_mean': [0.486, 0.459, 0.408],
+                     'im_std': [0.229, 0.224, 0.225],
+                     'mirror_type': None,
+                     'name': 'market1501',
+                     'num_prefetch_threads': 2,
+                     'part': 'test',
+                     'prng': <module 'numpy.random' from '/home/hjhuang/Software/anaconda2/envs/torch0.3/lib/python2.7/site-packages/numpy/random/__init__.pyc'>,
+                     'resize_h_w': (256, 128),
+                     'scale': True,
+                     'shuffle': False},
+ 'test_shuffle': False,
+ 'total_epochs': 300,
+ 'train_final_batch': True,
+ 'train_mirror_type': 'random',
+ 'train_set_kwargs': {'batch_dims': 'NCHW',
+                      'crop_prob': 0,
+                      'crop_ratio': 1,
+                      'final_batch': True,
+                      'ids_per_batch': 32,
+                      'im_mean': [0.486, 0.459, 0.408],
+                      'im_std': [0.229, 0.224, 0.225],
+                      'ims_per_id': 4,
+                      'mirror_type': 'random',
+                      'name': 'market1501',
+                      'num_prefetch_threads': 2,
+                      'part': 'trainval',
+                      'prng': <module 'numpy.random' from '/home/hjhuang/Software/anaconda2/envs/torch0.3/lib/python2.7/site-packages/numpy/random/__init__.pyc'>,
+                      'resize_h_w': (256, 128),
+                      'scale': True,
+                      'shuffle': True},
+ 'train_shuffle': True,
+ 'trainset_part': 'trainval',
+ 'val_set_kwargs': {'batch_dims': 'NCHW',
+                    'batch_size': 32,
+                    'final_batch': True,
+                    'im_mean': [0.486, 0.459, 0.408],
+                    'im_std': [0.229, 0.224, 0.225],
+                    'mirror_type': None,
+                    'name': 'market1501',
+                    'num_prefetch_threads': 2,
+                    'part': 'val',
+                    'prng': <module 'numpy.random' from '/home/hjhuang/Software/anaconda2/envs/torch0.3/lib/python2.7/site-packages/numpy/random/__init__.pyc'>,
+                    'resize_h_w': (256, 128),
+                    'scale': True,
+                    'shuffle': False},
+ 'weight_decay': 0.0005}
+------------------------------------------------------------
+----------------------------------------
+market1501 trainval set
+----------------------------------------
+NO. Images: 12936
+NO. IDs: 751
+----------------------------------------
+----------------------------------------
+market1501 val set
+----------------------------------------
+NO. Images: 1666
+NO. IDs: 100
+NO. Query Images: 409
+NO. Gallery Images: 1257
+NO. Multi-query Images: 0
+----------------------------------------
+----------------------------------------
+market1501 test set
+----------------------------------------
+NO. Images: 31969
+NO. IDs: 751
+NO. Query Images: 3368
+NO. Gallery Images: 15913
+NO. Multi-query Images: 12688
+----------------------------------------
+Ep 1, 26.02s, prec 7.53%, sm 4.88%, d_ap 12.7398, d_an 11.2688, loss 1.7920
+Ep 2, 22.75s, prec 30.13%, sm 18.14%, d_ap 6.9007, d_an 6.5388, loss 0.7556
+Ep 3, 22.98s, prec 53.45%, sm 29.49%, d_ap 3.8888, d_an 3.9285, loss 0.3672
+Ep 4, 23.44s, prec 69.43%, sm 47.24%, d_ap 3.3795, d_an 3.6358, loss 0.2442
+
+=========> Test on validation set <=========
+
+Single Query:                 [mAP: 79.69%], [cmc1: 87.29%], [cmc5: 96.58%], [cmc10: 98.78%]
+
+Ep 5, 29.67s, prec 73.66%, sm 49.01%, d_ap 3.2983, d_an 3.6180, loss 0.2079
+Ep 6, 22.93s, prec 76.22%, sm 52.84%, d_ap 3.0507, d_an 3.3982, loss 0.1787
+Ep 7, 22.91s, prec 81.38%, sm 60.81%, d_ap 2.9249, d_an 3.3586, loss 0.1441
+Ep 8, 22.80s, prec 81.68%, sm 59.22%, d_ap 2.7940, d_an 3.2273, loss 0.1422
+Ep 9, 22.79s, prec 79.06%, sm 59.99%, d_ap 3.1748, d_an 3.6518, loss 0.1598
+
+=========> Test on validation set <=========
+
+Single Query:                 [mAP: 89.00%], [cmc1: 94.38%], [cmc5: 99.76%], [cmc10: 99.76%]
+
+Ep 10, 28.99s, prec 85.89%, sm 68.21%, d_ap 2.9092, d_an 3.4578, loss 0.1096
+Ep 11, 22.70s, prec 87.63%, sm 69.50%, d_ap 2.8809, d_an 3.4466, loss 0.0986
+Ep 12, 22.73s, prec 87.96%, sm 74.06%, d_ap 3.0201, d_an 3.6985, loss 0.0973
+Ep 13, 22.67s, prec 88.20%, sm 74.64%, d_ap 3.2568, d_an 3.9339, loss 0.0952
+Ep 14, 22.73s, prec 89.61%, sm 75.56%, d_ap 2.9057, d_an 3.5531, loss 0.0797
+
+=========> Test on validation set <=========
+
+Single Query:                 [mAP: 93.39%], [cmc1: 95.84%], [cmc5: 99.27%], [cmc10: 100.00%]
+
+Ep 15, 29.46s, prec 90.85%, sm 76.33%, d_ap 2.9760, d_an 3.6436, loss 0.0749
+Ep 16, 22.81s, prec 91.59%, sm 79.81%, d_ap 3.1249, d_an 3.8766, loss 0.0752
+Ep 17, 22.97s, prec 91.33%, sm 79.53%, d_ap 3.1521, d_an 3.9093, loss 0.0631
+Ep 18, 22.97s, prec 91.67%, sm 81.34%, d_ap 3.1044, d_an 3.9285, loss 0.0753
+Ep 19, 22.81s, prec 90.55%, sm 77.09%, d_ap 3.1593, d_an 3.8785, loss 0.0785
+
+=========> Test on validation set <=========
+
+Single Query:                 [mAP: 93.40%], [cmc1: 96.09%], [cmc5: 100.00%], [cmc10: 100.00%]
+
+Ep 20, 29.31s, prec 92.46%, sm 81.62%, d_ap 2.8802, d_an 3.6705, loss 0.0652
+Ep 21, 22.00s, prec 92.62%, sm 82.56%, d_ap 2.8192, d_an 3.6049, loss 0.0585
+Ep 22, 21.99s, prec 93.07%, sm 83.29%, d_ap 2.8100, d_an 3.5930, loss 0.0490
+Ep 23, 22.05s, prec 93.98%, sm 84.21%, d_ap 2.9345, d_an 3.7975, loss 0.0473
+Ep 24, 22.15s, prec 94.94%, sm 84.61%, d_ap 2.9427, d_an 3.8224, loss 0.0397
+
+=========> Test on validation set <=========
+
+Single Query:                 [mAP: 94.92%], [cmc1: 97.31%], [cmc5: 99.76%], [cmc10: 100.00%]
+
+Ep 25, 28.46s, prec 94.74%, sm 86.27%, d_ap 3.1055, d_an 4.0565, loss 0.0521
+Ep 26, 22.40s, prec 92.21%, sm 82.56%, d_ap 3.2324, d_an 4.1539, loss 0.0584
+Ep 27, 22.26s, prec 94.62%, sm 85.49%, d_ap 2.9806, d_an 3.8828, loss 0.0410
+Ep 28, 22.11s, prec 95.35%, sm 89.03%, d_ap 3.2182, d_an 4.2183, loss 0.0368
+Ep 29, 21.93s, prec 94.35%, sm 85.79%, d_ap 2.7651, d_an 3.6026, loss 0.0530
+
+=========> Test on validation set <=========
+
+Single Query:                 [mAP: 95.44%], [cmc1: 97.31%], [cmc5: 100.00%], [cmc10: 100.00%]
+
+Ep 30, 28.59s, prec 95.12%, sm 87.31%, d_ap 3.0284, d_an 4.0014, loss 0.0385
+Ep 31, 22.05s, prec 94.51%, sm 86.41%, d_ap 3.1318, d_an 4.1422, loss 0.0447
+Ep 32, 22.02s, prec 95.03%, sm 87.31%, d_ap 3.0471, d_an 3.9905, loss 0.0402
+Ep 33, 22.15s, prec 93.47%, sm 82.64%, d_ap 2.7397, d_an 3.5507, loss 0.0517
+Ep 34, 22.23s, prec 95.00%, sm 87.29%, d_ap 3.0382, d_an 4.0310, loss 0.0436
+
+=========> Test on validation set <=========
+
+Single Query:                 [mAP: 95.10%], [cmc1: 97.31%], [cmc5: 99.51%], [cmc10: 100.00%]
+
+Ep 35, 28.66s, prec 93.57%, sm 85.71%, d_ap 3.1678, d_an 4.1389, loss 0.0482
+Ep 36, 22.36s, prec 94.75%, sm 86.07%, d_ap 2.8587, d_an 3.7907, loss 0.0400
+Ep 37, 22.21s, prec 95.88%, sm 89.73%, d_ap 3.0950, d_an 4.1883, loss 0.0302
+Ep 38, 22.31s, prec 93.00%, sm 85.27%, d_ap 3.3251, d_an 4.3089, loss 0.0511
+Ep 39, 22.27s, prec 94.71%, sm 86.33%, d_ap 2.7752, d_an 3.6468, loss 0.0411
+
+=========> Test on validation set <=========
+
+Single Query:                 [mAP: 96.04%], [cmc1: 97.80%], [cmc5: 99.76%], [cmc10: 100.00%]
+
+Ep 40, 28.72s, prec 96.68%, sm 88.96%, d_ap 2.7176, d_an 3.6611, loss 0.0277
+Ep 41, 22.29s, prec 95.74%, sm 89.28%, d_ap 2.9651, d_an 3.9834, loss 0.0418
+Ep 42, 22.06s, prec 95.64%, sm 87.78%, d_ap 3.1651, d_an 4.2048, loss 0.0353
+Ep 43, 22.03s, prec 96.22%, sm 89.44%, d_ap 2.8722, d_an 3.9066, loss 0.0317
+Ep 44, 22.09s, prec 97.02%, sm 91.30%, d_ap 2.8534, d_an 3.9719, loss 0.0287
+
+=========> Test on validation set <=========
+
+Single Query:                 [mAP: 96.24%], [cmc1: 97.56%], [cmc5: 100.00%], [cmc10: 100.00%]
+
+Ep 45, 28.20s, prec 95.11%, sm 89.01%, d_ap 2.8821, d_an 3.8721, loss 0.0385
+Ep 46, 22.10s, prec 96.35%, sm 89.41%, d_ap 2.8842, d_an 3.9339, loss 0.0300
+Ep 47, 22.00s, prec 95.43%, sm 88.98%, d_ap 3.0092, d_an 4.0218, loss 0.0415
+Ep 48, 21.92s, prec 94.14%, sm 85.74%, d_ap 2.8307, d_an 3.7016, loss 0.0431
+Ep 49, 22.07s, prec 95.72%, sm 90.14%, d_ap 2.8033, d_an 3.8267, loss 0.0321
+
+=========> Test on validation set <=========
+
+Single Query:                 [mAP: 96.26%], [cmc1: 97.31%], [cmc5: 100.00%], [cmc10: 100.00%]
+
+Ep 50, 28.25s, prec 96.35%, sm 89.16%, d_ap 2.9576, d_an 3.9889, loss 0.0287
+Ep 51, 22.39s, prec 94.99%, sm 87.42%, d_ap 3.0193, d_an 4.0919, loss 0.0373
+Ep 52, 22.37s, prec 95.54%, sm 89.21%, d_ap 2.8029, d_an 3.8301, loss 0.0328
+Ep 53, 22.47s, prec 96.15%, sm 89.24%, d_ap 2.8890, d_an 3.9410, loss 0.0304
+Ep 54, 22.38s, prec 94.48%, sm 86.92%, d_ap 2.9024, d_an 3.8985, loss 0.0512
+
+=========> Test on validation set <=========
+
+Single Query:                 [mAP: 96.77%], [cmc1: 98.29%], [cmc5: 100.00%], [cmc10: 100.00%]
+
+Ep 55, 28.71s, prec 95.93%, sm 87.32%, d_ap 2.6689, d_an 3.5754, loss 0.0311
+Ep 56, 22.08s, prec 95.53%, sm 87.99%, d_ap 2.6884, d_an 3.6369, loss 0.0332
+Ep 57, 22.13s, prec 95.60%, sm 89.44%, d_ap 2.8319, d_an 3.8834, loss 0.0323
+Ep 58, 21.91s, prec 96.15%, sm 90.03%, d_ap 2.7718, d_an 3.7812, loss 0.0282
+Ep 59, 21.93s, prec 96.21%, sm 89.25%, d_ap 2.8932, d_an 3.9941, loss 0.0315
+
+=========> Test on validation set <=========
+
+Single Query:                 [mAP: 96.00%], [cmc1: 97.07%], [cmc5: 99.76%], [cmc10: 100.00%]
+
+Ep 60, 28.31s, prec 96.18%, sm 90.09%, d_ap 3.0030, d_an 4.0882, loss 0.0340
+Ep 61, 22.02s, prec 96.26%, sm 88.20%, d_ap 2.8486, d_an 3.8439, loss 0.0303
+Ep 62, 21.99s, prec 96.63%, sm 90.18%, d_ap 3.0234, d_an 4.1080, loss 0.0295
+Ep 63, 21.97s, prec 96.43%, sm 90.33%, d_ap 3.0094, d_an 4.1052, loss 0.0265
+Ep 64, 22.02s, prec 95.30%, sm 88.55%, d_ap 2.7385, d_an 3.7166, loss 0.0408
+
+=========> Test on validation set <=========
+
+Single Query:                 [mAP: 95.89%], [cmc1: 97.80%], [cmc5: 99.76%], [cmc10: 100.00%]
+
+Ep 65, 28.17s, prec 96.15%, sm 91.20%, d_ap 3.0029, d_an 4.1465, loss 0.0289
+Ep 66, 22.35s, prec 96.54%, sm 89.47%, d_ap 2.6142, d_an 3.6236, loss 0.0290
+Ep 67, 22.37s, prec 96.28%, sm 89.47%, d_ap 2.8409, d_an 3.8827, loss 0.0314
+Ep 68, 22.35s, prec 95.99%, sm 89.93%, d_ap 2.8874, d_an 3.9573, loss 0.0321
+Ep 69, 22.41s, prec 95.82%, sm 88.28%, d_ap 2.7095, d_an 3.6796, loss 0.0328
+
+=========> Test on validation set <=========
+
+Single Query:                 [mAP: 96.84%], [cmc1: 98.29%], [cmc5: 100.00%], [cmc10: 100.00%]
+
+Ep 70, 28.81s, prec 95.68%, sm 87.99%, d_ap 2.5954, d_an 3.5893, loss 0.0321
+Ep 71, 22.14s, prec 95.18%, sm 88.60%, d_ap 2.8939, d_an 3.8747, loss 0.0373
+Ep 72, 22.08s, prec 95.02%, sm 87.33%, d_ap 2.8914, d_an 3.8225, loss 0.0363
+Ep 73, 22.19s, prec 95.72%, sm 87.98%, d_ap 2.7427, d_an 3.7344, loss 0.0348
+Ep 74, 22.49s, prec 95.58%, sm 87.63%, d_ap 2.6183, d_an 3.6007, loss 0.0354
+
+=========> Test on validation set <=========
+
+Single Query:                 [mAP: 96.46%], [cmc1: 98.04%], [cmc5: 100.00%], [cmc10: 100.00%]
+
+Ep 75, 28.32s, prec 96.32%, sm 90.66%, d_ap 2.6548, d_an 3.7053, loss 0.0273
+Ep 76, 21.95s, prec 96.47%, sm 90.37%, d_ap 2.6132, d_an 3.6970, loss 0.0275
+Ep 77, 22.15s, prec 94.82%, sm 86.91%, d_ap 2.8661, d_an 3.8479, loss 0.0402
+Ep 78, 21.98s, prec 94.10%, sm 86.30%, d_ap 2.8969, d_an 3.8629, loss 0.0447
+Ep 79, 22.26s, prec 94.81%, sm 86.18%, d_ap 2.8386, d_an 3.7693, loss 0.0405
+
+=========> Test on validation set <=========
+
+Single Query:                 [mAP: 96.46%], [cmc1: 98.53%], [cmc5: 100.00%], [cmc10: 100.00%]
+
+Ep 80, 28.49s, prec 94.56%, sm 86.42%, d_ap 2.8355, d_an 3.7874, loss 0.0388
+Ep 81, 22.28s, prec 95.24%, sm 87.15%, d_ap 2.6910, d_an 3.6091, loss 0.0367
+Ep 82, 22.09s, prec 95.56%, sm 87.76%, d_ap 2.6580, d_an 3.5701, loss 0.0354
+Ep 83, 22.09s, prec 94.30%, sm 86.08%, d_ap 2.6009, d_an 3.5006, loss 0.0421
+Ep 84, 22.27s, prec 95.11%, sm 88.39%, d_ap 2.6062, d_an 3.5944, loss 0.0342
+
+=========> Test on validation set <=========
+
+Single Query:                 [mAP: 97.64%], [cmc1: 98.78%], [cmc5: 100.00%], [cmc10: 100.00%]
+
+Ep 85, 28.31s, prec 97.73%, sm 92.96%, d_ap 2.5966, d_an 3.7393, loss 0.0253
+Ep 86, 21.95s, prec 96.74%, sm 90.93%, d_ap 2.6680, d_an 3.7220, loss 0.0252
+Ep 87, 21.95s, prec 97.23%, sm 91.06%, d_ap 2.4979, d_an 3.5184, loss 0.0212
+Ep 88, 21.96s, prec 96.11%, sm 90.77%, d_ap 2.5092, d_an 3.6189, loss 0.0324
+Ep 89, 21.98s, prec 96.09%, sm 88.46%, d_ap 2.6776, d_an 3.7045, loss 0.0339
+
+=========> Test on validation set <=========
+
+Single Query:                 [mAP: 96.62%], [cmc1: 98.53%], [cmc5: 100.00%], [cmc10: 100.00%]
+
+Ep 90, 28.30s, prec 95.15%, sm 88.36%, d_ap 2.3645, d_an 3.2766, loss 0.0373
+Ep 91, 22.24s, prec 96.31%, sm 89.17%, d_ap 2.3183, d_an 3.2680, loss 0.0268
+Ep 92, 21.93s, prec 96.43%, sm 90.61%, d_ap 2.5745, d_an 3.6673, loss 0.0275
+Ep 93, 21.97s, prec 96.87%, sm 91.95%, d_ap 2.6271, d_an 3.7128, loss 0.0252
+Ep 94, 22.07s, prec 97.92%, sm 91.35%, d_ap 2.4751, d_an 3.5361, loss 0.0200
+
+=========> Test on validation set <=========
+
+Single Query:                 [mAP: 96.57%], [cmc1: 97.80%], [cmc5: 99.51%], [cmc10: 100.00%]
+
+Ep 95, 28.27s, prec 95.84%, sm 89.36%, d_ap 2.5386, d_an 3.5880, loss 0.0411
+Ep 96, 22.14s, prec 96.35%, sm 90.55%, d_ap 2.4909, d_an 3.4748, loss 0.0303
+Ep 97, 21.99s, prec 96.58%, sm 90.16%, d_ap 2.4052, d_an 3.3993, loss 0.0260
+Ep 98, 21.96s, prec 96.38%, sm 88.70%, d_ap 2.3273, d_an 3.2536, loss 0.0290
+Ep 99, 21.99s, prec 96.78%, sm 90.08%, d_ap 2.3114, d_an 3.2852, loss 0.0253
+
+=========> Test on validation set <=========
+
+Single Query:                 [mAP: 97.46%], [cmc1: 98.53%], [cmc5: 100.00%], [cmc10: 100.00%]
+
+Ep 100, 28.33s, prec 96.34%, sm 89.63%, d_ap 2.3086, d_an 3.2955, loss 0.0295
+Ep 101, 22.19s, prec 96.39%, sm 90.59%, d_ap 2.3512, d_an 3.3228, loss 0.0271
+Ep 102, 21.92s, prec 97.52%, sm 90.84%, d_ap 2.2714, d_an 3.2475, loss 0.0205
+Ep 103, 22.03s, prec 97.22%, sm 91.64%, d_ap 2.2625, d_an 3.2867, loss 0.0209
+Ep 104, 22.14s, prec 96.84%, sm 89.85%, d_ap 2.2915, d_an 3.2748, loss 0.0248
+
+=========> Test on validation set <=========
+
+Single Query:                 [mAP: 97.02%], [cmc1: 98.78%], [cmc5: 100.00%], [cmc10: 100.00%]
+
+Ep 105, 28.46s, prec 97.11%, sm 91.04%, d_ap 2.1952, d_an 3.1500, loss 0.0239
+Ep 106, 22.00s, prec 97.39%, sm 91.78%, d_ap 2.2396, d_an 3.2341, loss 0.0228
+Ep 107, 21.89s, prec 95.99%, sm 85.04%, d_ap 2.0800, d_an 2.8612, loss 0.0345
+Ep 108, 21.87s, prec 96.64%, sm 90.66%, d_ap 2.4286, d_an 3.4572, loss 0.0257
+Ep 109, 21.92s, prec 96.27%, sm 88.38%, d_ap 2.3843, d_an 3.3573, loss 0.0345
+
+=========> Test on validation set <=========
+
+Single Query:                 [mAP: 94.48%], [cmc1: 97.80%], [cmc5: 98.78%], [cmc10: 99.02%]
+
+Ep 110, 28.19s, prec 95.52%, sm 87.45%, d_ap 2.4935, d_an 3.4771, loss 0.0376
+Ep 111, 22.29s, prec 94.72%, sm 85.89%, d_ap 2.3153, d_an 3.2400, loss 0.0414
+Ep 112, 22.18s, prec 94.45%, sm 85.17%, d_ap 2.2120, d_an 3.0683, loss 0.0441
+Ep 113, 22.24s, prec 96.09%, sm 86.87%, d_ap 2.0984, d_an 2.9049, loss 0.0330
+Ep 114, 22.14s, prec 96.82%, sm 90.33%, d_ap 2.2238, d_an 3.1663, loss 0.0249
+
+=========> Test on validation set <=========
+
+Single Query:                 [mAP: 96.55%], [cmc1: 97.80%], [cmc5: 100.00%], [cmc10: 100.00%]
+
+Ep 115, 28.39s, prec 96.44%, sm 90.13%, d_ap 2.1697, d_an 3.1182, loss 0.0275
+Ep 116, 21.96s, prec 96.80%, sm 89.47%, d_ap 2.1415, d_an 3.0928, loss 0.0255
+Ep 117, 21.96s, prec 94.62%, sm 85.74%, d_ap 2.2693, d_an 3.1056, loss 0.0402
+Ep 118, 21.90s, prec 96.09%, sm 88.62%, d_ap 2.2810, d_an 3.1734, loss 0.0309
+Ep 119, 22.04s, prec 97.32%, sm 88.80%, d_ap 2.0122, d_an 2.8582, loss 0.0239
+
+=========> Test on validation set <=========
+
+Single Query:                 [mAP: 97.12%], [cmc1: 98.29%], [cmc5: 99.76%], [cmc10: 100.00%]
+
+Ep 120, 28.26s, prec 96.87%, sm 89.98%, d_ap 2.1124, d_an 3.0563, loss 0.0258
+Ep 121, 22.35s, prec 95.91%, sm 88.71%, d_ap 2.1816, d_an 3.1216, loss 0.0306
+Ep 122, 22.16s, prec 96.78%, sm 89.14%, d_ap 2.1860, d_an 3.1609, loss 0.0249
+Ep 123, 22.10s, prec 96.45%, sm 89.64%, d_ap 2.1659, d_an 3.1125, loss 0.0274
+Ep 124, 21.99s, prec 96.11%, sm 88.29%, d_ap 2.1086, d_an 2.9801, loss 0.0311
+
+=========> Test on validation set <=========
+
+Single Query:                 [mAP: 97.18%], [cmc1: 98.04%], [cmc5: 99.76%], [cmc10: 99.76%]
+
+Ep 125, 28.72s, prec 97.25%, sm 90.48%, d_ap 2.0615, d_an 3.0268, loss 0.0222
+Ep 126, 22.04s, prec 97.52%, sm 90.58%, d_ap 2.1101, d_an 3.0992, loss 0.0221
+Ep 127, 22.18s, prec 96.23%, sm 87.62%, d_ap 1.9505, d_an 2.7833, loss 0.0291
+Ep 128, 22.07s, prec 96.85%, sm 88.12%, d_ap 1.9743, d_an 2.8420, loss 0.0267
+Ep 129, 22.17s, prec 95.92%, sm 88.72%, d_ap 2.1547, d_an 3.0654, loss 0.0292
+
+=========> Test on validation set <=========
+
+Single Query:                 [mAP: 95.57%], [cmc1: 96.82%], [cmc5: 99.27%], [cmc10: 99.76%]
+
+Ep 130, 28.47s, prec 97.82%, sm 90.42%, d_ap 2.0566, d_an 3.0113, loss 0.0207
+Ep 131, 22.24s, prec 96.66%, sm 89.19%, d_ap 2.0114, d_an 2.9181, loss 0.0305
+Ep 132, 22.11s, prec 96.08%, sm 87.06%, d_ap 1.9229, d_an 2.7418, loss 0.0307
+Ep 133, 22.16s, prec 96.50%, sm 88.76%, d_ap 1.9974, d_an 2.8660, loss 0.0301
+Ep 134, 22.16s, prec 96.60%, sm 88.58%, d_ap 2.0551, d_an 2.9809, loss 0.0296
+
+=========> Test on validation set <=========
+
+Single Query:                 [mAP: 96.53%], [cmc1: 98.04%], [cmc5: 99.51%], [cmc10: 100.00%]
+
+Ep 135, 28.31s, prec 96.32%, sm 88.73%, d_ap 2.0897, d_an 2.9793, loss 0.0295
+Ep 136, 22.02s, prec 96.29%, sm 87.07%, d_ap 1.9791, d_an 2.8208, loss 0.0291
+Ep 137, 22.15s, prec 95.45%, sm 86.42%, d_ap 1.9675, d_an 2.8153, loss 0.0390
+Ep 138, 22.06s, prec 94.95%, sm 85.69%, d_ap 1.9356, d_an 2.7136, loss 0.0390
+Ep 139, 22.20s, prec 96.86%, sm 85.92%, d_ap 1.8160, d_an 2.5997, loss 0.0305
+
+=========> Test on validation set <=========
+
+Single Query:                 [mAP: 96.17%], [cmc1: 98.53%], [cmc5: 99.76%], [cmc10: 100.00%]
+
+Ep 140, 28.51s, prec 95.74%, sm 87.22%, d_ap 1.9248, d_an 2.7522, loss 0.0328
+Ep 141, 22.08s, prec 96.19%, sm 88.21%, d_ap 1.8930, d_an 2.7390, loss 0.0299
+Ep 142, 22.13s, prec 97.26%, sm 89.67%, d_ap 1.8152, d_an 2.6560, loss 0.0236
+Ep 143, 22.17s, prec 97.65%, sm 90.39%, d_ap 1.8784, d_an 2.7636, loss 0.0205
+Ep 144, 22.03s, prec 97.52%, sm 89.20%, d_ap 1.8562, d_an 2.7253, loss 0.0231
+
+=========> Test on validation set <=========
+
+Single Query:                 [mAP: 96.49%], [cmc1: 98.04%], [cmc5: 99.76%], [cmc10: 100.00%]
+
+Ep 145, 28.32s, prec 96.30%, sm 88.39%, d_ap 1.7927, d_an 2.6361, loss 0.0328
+Ep 146, 22.21s, prec 95.86%, sm 86.59%, d_ap 1.8979, d_an 2.7058, loss 0.0315
+Ep 147, 22.25s, prec 96.05%, sm 85.99%, d_ap 1.9146, d_an 2.7008, loss 0.0335
+Ep 148, 22.21s, prec 95.36%, sm 85.33%, d_ap 1.8680, d_an 2.6529, loss 0.0380
+Ep 149, 22.23s, prec 93.64%, sm 81.86%, d_ap 1.9721, d_an 2.6916, loss 0.0478
+
+=========> Test on validation set <=========
+
+Single Query:                 [mAP: 95.24%], [cmc1: 98.04%], [cmc5: 99.51%], [cmc10: 99.76%]
+
+Ep 150, 28.61s, prec 94.33%, sm 83.47%, d_ap 1.9662, d_an 2.7013, loss 0.0436
+=====> lr adjusted to 0.0001909985
+Ep 151, 22.32s, prec 94.73%, sm 82.45%, d_ap 1.9275, d_an 2.6339, loss 0.0433
+=====> lr adjusted to 0.0001824022
+Ep 152, 22.27s, prec 94.61%, sm 84.49%, d_ap 1.9286, d_an 2.6611, loss 0.0413
+=====> lr adjusted to 0.0001741927
+Ep 153, 22.11s, prec 94.81%, sm 85.94%, d_ap 1.8878, d_an 2.6519, loss 0.0362
+=====> lr adjusted to 0.0001663528
+Ep 154, 21.99s, prec 96.00%, sm 87.07%, d_ap 1.8575, d_an 2.6424, loss 0.0337
+=====> lr adjusted to 0.0001588656
+
+=========> Test on validation set <=========
+
+Single Query:                 [mAP: 97.57%], [cmc1: 98.78%], [cmc5: 100.00%], [cmc10: 100.00%]
+
+Ep 155, 28.57s, prec 97.06%, sm 90.07%, d_ap 1.8537, d_an 2.6658, loss 0.0243
+=====> lr adjusted to 0.0001517155
+Ep 156, 22.20s, prec 96.83%, sm 90.07%, d_ap 1.8525, d_an 2.7194, loss 0.0240
+=====> lr adjusted to 0.0001448872
+Ep 157, 22.10s, prec 96.87%, sm 89.90%, d_ap 1.8016, d_an 2.6601, loss 0.0254
+=====> lr adjusted to 0.0001383662
+Ep 158, 21.94s, prec 97.52%, sm 92.23%, d_ap 1.7876, d_an 2.7121, loss 0.0190
+=====> lr adjusted to 0.0001321387
+Ep 159, 22.31s, prec 97.88%, sm 91.59%, d_ap 1.7821, d_an 2.6557, loss 0.0168
+=====> lr adjusted to 0.0001261915
+
+=========> Test on validation set <=========
+
+Single Query:                 [mAP: 98.46%], [cmc1: 99.02%], [cmc5: 100.00%], [cmc10: 100.00%]
+
+Ep 160, 28.90s, prec 98.73%, sm 94.23%, d_ap 1.7232, d_an 2.6885, loss 0.0115
+=====> lr adjusted to 0.0001205119
+Ep 161, 22.07s, prec 98.47%, sm 94.13%, d_ap 1.7789, d_an 2.7553, loss 0.0126
+=====> lr adjusted to 0.000115088
+Ep 162, 21.91s, prec 98.73%, sm 94.49%, d_ap 1.7347, d_an 2.7170, loss 0.0115
+=====> lr adjusted to 0.0001099082
+Ep 163, 21.88s, prec 99.01%, sm 95.12%, d_ap 1.7406, d_an 2.7680, loss 0.0090
+=====> lr adjusted to 0.0001049615
+Ep 164, 21.91s, prec 98.86%, sm 94.66%, d_ap 1.7371, d_an 2.7683, loss 0.0109
+=====> lr adjusted to 0.0001002374
+
+=========> Test on validation set <=========
+
+Single Query:                 [mAP: 98.33%], [cmc1: 99.27%], [cmc5: 100.00%], [cmc10: 100.00%]
+
+Ep 165, 28.30s, prec 99.09%, sm 95.27%, d_ap 1.7425, d_an 2.8127, loss 0.0084
+=====> lr adjusted to 0.000095726
+Ep 166, 21.91s, prec 99.25%, sm 95.30%, d_ap 1.7519, d_an 2.8245, loss 0.0085
+=====> lr adjusted to 0.0000914176
+Ep 167, 21.99s, prec 99.38%, sm 96.17%, d_ap 1.7144, d_an 2.8239, loss 0.0066
+=====> lr adjusted to 0.0000873032
+Ep 168, 21.84s, prec 99.19%, sm 96.05%, d_ap 1.6962, d_an 2.7457, loss 0.0090
+=====> lr adjusted to 0.0000833739
+Ep 169, 21.90s, prec 98.86%, sm 94.88%, d_ap 1.7160, d_an 2.7947, loss 0.0105
+=====> lr adjusted to 0.0000796214
+
+=========> Test on validation set <=========
+
+Single Query:                 [mAP: 98.56%], [cmc1: 99.51%], [cmc5: 100.00%], [cmc10: 100.00%]
+
+Ep 170, 28.19s, prec 98.93%, sm 96.68%, d_ap 1.7145, d_an 2.7998, loss 0.0085
+=====> lr adjusted to 0.0000760379
+Ep 171, 22.05s, prec 99.19%, sm 95.14%, d_ap 1.7940, d_an 2.8204, loss 0.0083
+=====> lr adjusted to 0.0000726156
+Ep 172, 21.91s, prec 99.38%, sm 95.96%, d_ap 1.7761, d_an 2.8843, loss 0.0066
+=====> lr adjusted to 0.0000693474
+Ep 173, 22.08s, prec 98.99%, sm 96.38%, d_ap 1.6708, d_an 2.7900, loss 0.0078
+=====> lr adjusted to 0.0000662262
+Ep 174, 22.15s, prec 99.87%, sm 98.47%, d_ap 1.6373, d_an 2.7739, loss 0.0029
+=====> lr adjusted to 0.0000632456
+
+=========> Test on validation set <=========
+
+Single Query:                 [mAP: 98.80%], [cmc1: 99.76%], [cmc5: 100.00%], [cmc10: 100.00%]
+
+Ep 175, 28.61s, prec 99.67%, sm 97.21%, d_ap 1.6728, d_an 2.8141, loss 0.0046
+=====> lr adjusted to 0.000060399
+Ep 176, 22.08s, prec 99.38%, sm 96.65%, d_ap 1.6590, d_an 2.7639, loss 0.0062
+=====> lr adjusted to 0.0000576806
+Ep 177, 22.11s, prec 99.44%, sm 96.38%, d_ap 1.6828, d_an 2.8048, loss 0.0057
+=====> lr adjusted to 0.0000550846
+Ep 178, 22.12s, prec 99.08%, sm 96.83%, d_ap 1.7368, d_an 2.9157, loss 0.0082
+=====> lr adjusted to 0.0000526054
+Ep 179, 22.15s, prec 99.31%, sm 96.98%, d_ap 1.6809, d_an 2.8454, loss 0.0062
+=====> lr adjusted to 0.0000502377
+
+=========> Test on validation set <=========
+
+Single Query:                 [mAP: 98.73%], [cmc1: 99.51%], [cmc5: 100.00%], [cmc10: 100.00%]
+
+Ep 180, 28.20s, prec 98.91%, sm 96.21%, d_ap 1.6912, d_an 2.8129, loss 0.0091
+=====> lr adjusted to 0.0000479767
+Ep 181, 22.28s, prec 99.41%, sm 97.01%, d_ap 1.7480, d_an 2.9162, loss 0.0057
+=====> lr adjusted to 0.0000458174
+Ep 182, 22.09s, prec 99.24%, sm 97.31%, d_ap 1.7406, d_an 2.8946, loss 0.0057
+=====> lr adjusted to 0.0000437552
+Ep 183, 22.20s, prec 99.41%, sm 97.17%, d_ap 1.7625, d_an 2.8996, loss 0.0050
+=====> lr adjusted to 0.0000417859
+Ep 184, 22.21s, prec 99.57%, sm 97.25%, d_ap 1.7871, d_an 2.9557, loss 0.0044
+=====> lr adjusted to 0.0000399052
+
+=========> Test on validation set <=========
+
+Single Query:                 [mAP: 98.61%], [cmc1: 98.78%], [cmc5: 100.00%], [cmc10: 100.00%]
+
+Ep 185, 28.25s, prec 99.14%, sm 96.49%, d_ap 1.7631, d_an 2.9002, loss 0.0066
+=====> lr adjusted to 0.0000381092
+Ep 186, 21.78s, prec 99.84%, sm 97.94%, d_ap 1.7369, d_an 2.9191, loss 0.0027
+=====> lr adjusted to 0.000036394
+Ep 187, 21.78s, prec 99.74%, sm 97.98%, d_ap 1.7320, d_an 2.9299, loss 0.0031
+=====> lr adjusted to 0.000034756
+Ep 188, 21.90s, prec 99.80%, sm 98.08%, d_ap 1.7268, d_an 2.9449, loss 0.0026
+=====> lr adjusted to 0.0000331917
+Ep 189, 21.85s, prec 99.25%, sm 97.77%, d_ap 1.7134, d_an 2.9274, loss 0.0058
+=====> lr adjusted to 0.0000316979
+
+=========> Test on validation set <=========
+
+Single Query:                 [mAP: 98.65%], [cmc1: 99.02%], [cmc5: 100.00%], [cmc10: 100.00%]
+
+Ep 190, 28.37s, prec 99.37%, sm 98.13%, d_ap 1.7230, d_an 2.9646, loss 0.0042
+=====> lr adjusted to 0.0000302712
+Ep 191, 22.37s, prec 99.31%, sm 97.54%, d_ap 1.7104, d_an 2.9094, loss 0.0050
+=====> lr adjusted to 0.0000289088
+Ep 192, 22.20s, prec 99.54%, sm 98.11%, d_ap 1.6917, d_an 2.9041, loss 0.0038
+=====> lr adjusted to 0.0000276077
+Ep 193, 22.18s, prec 99.64%, sm 97.39%, d_ap 1.6704, d_an 2.8383, loss 0.0038
+=====> lr adjusted to 0.0000263651
+Ep 194, 22.22s, prec 99.64%, sm 98.05%, d_ap 1.6982, d_an 2.8774, loss 0.0032
+=====> lr adjusted to 0.0000251785
+
+=========> Test on validation set <=========
+
+Single Query:                 [mAP: 98.91%], [cmc1: 99.27%], [cmc5: 100.00%], [cmc10: 100.00%]
+
+Ep 195, 28.49s, prec 99.58%, sm 97.30%, d_ap 1.6789, d_an 2.8515, loss 0.0043
+=====> lr adjusted to 0.0000240453
+Ep 196, 21.94s, prec 99.45%, sm 97.72%, d_ap 1.6885, d_an 2.8826, loss 0.0051
+=====> lr adjusted to 0.0000229631
+Ep 197, 21.99s, prec 99.51%, sm 97.68%, d_ap 1.6550, d_an 2.9068, loss 0.0044
+=====> lr adjusted to 0.0000219296
+Ep 198, 21.94s, prec 99.61%, sm 97.72%, d_ap 1.6465, d_an 2.8200, loss 0.0037
+=====> lr adjusted to 0.0000209426
+Ep 199, 22.04s, prec 99.84%, sm 98.73%, d_ap 1.6595, d_an 2.8849, loss 0.0021
+=====> lr adjusted to 0.00002
+
+=========> Test on validation set <=========
+
+Single Query:                 [mAP: 98.91%], [cmc1: 99.27%], [cmc5: 100.00%], [cmc10: 100.00%]
+
+Ep 200, 28.23s, prec 99.59%, sm 98.50%, d_ap 1.6999, d_an 2.9480, loss 0.0030
+=====> lr adjusted to 0.0000190999
+Ep 201, 22.14s, prec 99.80%, sm 98.63%, d_ap 1.6884, d_an 2.9553, loss 0.0021
+=====> lr adjusted to 0.0000182402
+Ep 202, 22.09s, prec 99.71%, sm 98.54%, d_ap 1.6698, d_an 2.9605, loss 0.0025
+=====> lr adjusted to 0.0000174193
+Ep 203, 22.09s, prec 99.84%, sm 98.50%, d_ap 1.7006, d_an 2.9556, loss 0.0022
+=====> lr adjusted to 0.0000166353
+Ep 204, 22.07s, prec 99.71%, sm 98.73%, d_ap 1.6856, d_an 2.9360, loss 0.0026
+=====> lr adjusted to 0.0000158866
+
+=========> Test on validation set <=========
+
+Single Query:                 [mAP: 99.09%], [cmc1: 99.51%], [cmc5: 100.00%], [cmc10: 100.00%]
+
+Ep 205, 28.54s, prec 99.77%, sm 98.69%, d_ap 1.6989, d_an 2.9532, loss 0.0024
+=====> lr adjusted to 0.0000151716
+Ep 206, 22.11s, prec 99.77%, sm 98.44%, d_ap 1.6897, d_an 2.9391, loss 0.0027
+=====> lr adjusted to 0.0000144887
+Ep 207, 21.99s, prec 99.84%, sm 98.40%, d_ap 1.6965, d_an 2.9141, loss 0.0025
+=====> lr adjusted to 0.0000138366
+Ep 208, 22.13s, prec 99.64%, sm 98.04%, d_ap 1.6930, d_an 2.9478, loss 0.0032
+=====> lr adjusted to 0.0000132139
+Ep 209, 22.01s, prec 99.51%, sm 98.17%, d_ap 1.6903, d_an 2.9213, loss 0.0036
+=====> lr adjusted to 0.0000126191
+
+=========> Test on validation set <=========
+
+Single Query:                 [mAP: 99.15%], [cmc1: 99.51%], [cmc5: 100.00%], [cmc10: 100.00%]
+
+Ep 210, 28.40s, prec 99.73%, sm 98.60%, d_ap 1.6906, d_an 2.9735, loss 0.0028
+=====> lr adjusted to 0.0000120512
+Ep 211, 21.98s, prec 99.77%, sm 98.82%, d_ap 1.6866, d_an 2.9598, loss 0.0020
+=====> lr adjusted to 0.0000115088
+Ep 212, 22.03s, prec 99.80%, sm 98.85%, d_ap 1.6711, d_an 2.9745, loss 0.0020
+=====> lr adjusted to 0.0000109908
+Ep 213, 22.00s, prec 99.90%, sm 98.79%, d_ap 1.6539, d_an 2.9114, loss 0.0013
+=====> lr adjusted to 0.0000104961
+Ep 214, 22.01s, prec 100.00%, sm 98.63%, d_ap 1.6693, d_an 2.9033, loss 0.0012
+=====> lr adjusted to 0.0000100237
+
+=========> Test on validation set <=========
+
+Single Query:                 [mAP: 99.20%], [cmc1: 99.51%], [cmc5: 100.00%], [cmc10: 100.00%]
+
+Ep 215, 28.27s, prec 99.87%, sm 98.82%, d_ap 1.6547, d_an 2.8933, loss 0.0018
+=====> lr adjusted to 0.0000095726
+Ep 216, 21.93s, prec 100.00%, sm 99.25%, d_ap 1.6661, d_an 2.9775, loss 0.0006
+=====> lr adjusted to 0.0000091418
+Ep 217, 21.88s, prec 99.41%, sm 97.72%, d_ap 1.6605, d_an 2.9089, loss 0.0046
+=====> lr adjusted to 0.0000087303
+Ep 218, 21.91s, prec 99.87%, sm 98.89%, d_ap 1.6871, d_an 2.9675, loss 0.0017
+=====> lr adjusted to 0.0000083374
+Ep 219, 22.08s, prec 99.90%, sm 98.36%, d_ap 1.6484, d_an 2.8862, loss 0.0022
+=====> lr adjusted to 0.0000079621
+
+=========> Test on validation set <=========
+
+Single Query:                 [mAP: 99.12%], [cmc1: 99.27%], [cmc5: 100.00%], [cmc10: 100.00%]
+
+Ep 220, 28.28s, prec 99.87%, sm 99.12%, d_ap 1.6561, d_an 2.9375, loss 0.0013
+=====> lr adjusted to 0.0000076038
+Ep 221, 21.97s, prec 99.76%, sm 98.52%, d_ap 1.6447, d_an 2.9032, loss 0.0024
+=====> lr adjusted to 0.0000072616
+Ep 222, 21.89s, prec 99.23%, sm 98.22%, d_ap 1.6653, d_an 2.9205, loss 0.0064
+=====> lr adjusted to 0.0000069347
+Ep 223, 21.83s, prec 99.54%, sm 98.37%, d_ap 1.6859, d_an 2.9223, loss 0.0037
+=====> lr adjusted to 0.0000066226
+Ep 224, 21.79s, prec 99.63%, sm 98.49%, d_ap 1.6903, d_an 3.0197, loss 0.0026
+=====> lr adjusted to 0.0000063246
+
+=========> Test on validation set <=========
+
+Single Query:                 [mAP: 99.24%], [cmc1: 99.51%], [cmc5: 100.00%], [cmc10: 100.00%]
+
+Ep 225, 28.11s, prec 99.90%, sm 99.09%, d_ap 1.6735, d_an 2.9885, loss 0.0012
+=====> lr adjusted to 0.0000060399
+Ep 226, 22.03s, prec 99.77%, sm 98.93%, d_ap 1.7024, d_an 2.9842, loss 0.0020
+=====> lr adjusted to 0.0000057681
+Ep 227, 21.94s, prec 99.47%, sm 98.40%, d_ap 1.6893, d_an 2.9195, loss 0.0037
+=====> lr adjusted to 0.0000055085
+Ep 228, 21.76s, prec 99.40%, sm 97.83%, d_ap 1.6957, d_an 3.0150, loss 0.0052
+=====> lr adjusted to 0.0000052605
+Ep 229, 21.94s, prec 99.77%, sm 98.99%, d_ap 1.6877, d_an 2.9673, loss 0.0016
+=====> lr adjusted to 0.0000050238
+
+=========> Test on validation set <=========
+
+Single Query:                 [mAP: 99.27%], [cmc1: 99.51%], [cmc5: 100.00%], [cmc10: 100.00%]
+
+Ep 230, 28.01s, prec 99.74%, sm 98.34%, d_ap 1.6986, d_an 2.9744, loss 0.0030
+=====> lr adjusted to 0.0000047977
+Ep 231, 22.09s, prec 99.80%, sm 98.63%, d_ap 1.6994, d_an 3.0026, loss 0.0020
+=====> lr adjusted to 0.0000045817
+Ep 232, 21.82s, prec 99.67%, sm 97.91%, d_ap 1.6889, d_an 2.9782, loss 0.0034
+=====> lr adjusted to 0.0000043755
+Ep 233, 21.82s, prec 99.74%, sm 99.24%, d_ap 1.6722, d_an 2.9884, loss 0.0016
+=====> lr adjusted to 0.0000041786
+Ep 234, 21.73s, prec 99.80%, sm 99.08%, d_ap 1.6788, d_an 2.9876, loss 0.0015
+=====> lr adjusted to 0.0000039905
+
+=========> Test on validation set <=========
+
+Single Query:                 [mAP: 99.29%], [cmc1: 99.51%], [cmc5: 100.00%], [cmc10: 100.00%]
+
+Ep 235, 28.49s, prec 99.25%, sm 98.03%, d_ap 1.6755, d_an 2.9523, loss 0.0051
+=====> lr adjusted to 0.0000038109
+Ep 236, 22.22s, prec 99.93%, sm 99.15%, d_ap 1.6624, d_an 3.0098, loss 0.0008
+=====> lr adjusted to 0.0000036394
+Ep 237, 22.07s, prec 99.61%, sm 98.60%, d_ap 1.6620, d_an 2.9530, loss 0.0032
+=====> lr adjusted to 0.0000034756
+Ep 238, 21.89s, prec 99.74%, sm 98.69%, d_ap 1.6645, d_an 2.9701, loss 0.0022
+=====> lr adjusted to 0.0000033192
+Ep 239, 21.90s, prec 99.77%, sm 98.89%, d_ap 1.6722, d_an 2.9557, loss 0.0017
+=====> lr adjusted to 0.0000031698
+
+=========> Test on validation set <=========
+
+Single Query:                 [mAP: 99.34%], [cmc1: 99.51%], [cmc5: 100.00%], [cmc10: 100.00%]
+
+Ep 240, 28.17s, prec 99.84%, sm 98.82%, d_ap 1.6710, d_an 2.9424, loss 0.0017
+=====> lr adjusted to 0.0000030271
+Ep 241, 22.19s, prec 99.80%, sm 98.86%, d_ap 1.6872, d_an 2.9900, loss 0.0023
+=====> lr adjusted to 0.0000028909
+Ep 242, 22.25s, prec 99.93%, sm 98.89%, d_ap 1.6618, d_an 2.9875, loss 0.0013
+=====> lr adjusted to 0.0000027608
+Ep 243, 22.34s, prec 99.80%, sm 98.73%, d_ap 1.6709, d_an 2.9451, loss 0.0018
+=====> lr adjusted to 0.0000026365
+Ep 244, 22.12s, prec 99.71%, sm 98.70%, d_ap 1.6670, d_an 2.9773, loss 0.0023
+=====> lr adjusted to 0.0000025179
+
+=========> Test on validation set <=========
+
+Single Query:                 [mAP: 99.33%], [cmc1: 99.51%], [cmc5: 100.00%], [cmc10: 100.00%]
+
+Ep 245, 28.35s, prec 99.87%, sm 99.09%, d_ap 1.6687, d_an 3.0194, loss 0.0019
+=====> lr adjusted to 0.0000024045
+Ep 246, 21.83s, prec 99.80%, sm 98.83%, d_ap 1.6629, d_an 2.9554, loss 0.0020
+=====> lr adjusted to 0.0000022963
+Ep 247, 21.89s, prec 99.57%, sm 98.36%, d_ap 1.6652, d_an 2.9704, loss 0.0034
+=====> lr adjusted to 0.000002193
+Ep 248, 21.78s, prec 99.71%, sm 99.15%, d_ap 1.6665, d_an 2.9696, loss 0.0024
+=====> lr adjusted to 0.0000020943
+Ep 249, 21.95s, prec 99.77%, sm 99.19%, d_ap 1.6645, d_an 2.9528, loss 0.0017
+=====> lr adjusted to 0.000002
+
+=========> Test on validation set <=========
+
+Single Query:                 [mAP: 99.34%], [cmc1: 99.51%], [cmc5: 100.00%], [cmc10: 100.00%]
+
+Ep 250, 28.12s, prec 99.42%, sm 98.42%, d_ap 1.6797, d_an 3.0168, loss 0.0044
+=====> lr adjusted to 0.00000191
+Ep 251, 22.00s, prec 99.87%, sm 99.21%, d_ap 1.6680, d_an 2.9721, loss 0.0011
+=====> lr adjusted to 0.000001824
+Ep 252, 22.10s, prec 99.90%, sm 98.83%, d_ap 1.6851, d_an 2.9774, loss 0.0018
+=====> lr adjusted to 0.0000017419
+Ep 253, 22.04s, prec 99.74%, sm 99.32%, d_ap 1.6510, d_an 2.9434, loss 0.0021
+=====> lr adjusted to 0.0000016635
+Ep 254, 22.09s, prec 99.53%, sm 98.78%, d_ap 1.6742, d_an 2.9764, loss 0.0037
+=====> lr adjusted to 0.0000015887
+
+=========> Test on validation set <=========
+
+Single Query:                 [mAP: 99.32%], [cmc1: 99.51%], [cmc5: 100.00%], [cmc10: 100.00%]
+
+Ep 255, 28.32s, prec 99.87%, sm 99.09%, d_ap 1.6714, d_an 2.9747, loss 0.0013
+=====> lr adjusted to 0.0000015172
+Ep 256, 22.13s, prec 99.74%, sm 99.04%, d_ap 1.6853, d_an 2.9586, loss 0.0020
+=====> lr adjusted to 0.0000014489
+Ep 257, 21.96s, prec 99.74%, sm 98.69%, d_ap 1.6705, d_an 2.9492, loss 0.0021
+=====> lr adjusted to 0.0000013837
+Ep 258, 21.91s, prec 99.54%, sm 98.31%, d_ap 1.6762, d_an 2.9422, loss 0.0034
+=====> lr adjusted to 0.0000013214
+Ep 259, 21.94s, prec 99.74%, sm 99.25%, d_ap 1.6655, d_an 3.0029, loss 0.0018
+=====> lr adjusted to 0.0000012619
+
+=========> Test on validation set <=========
+
+Single Query:                 [mAP: 99.35%], [cmc1: 99.51%], [cmc5: 100.00%], [cmc10: 100.00%]
+
+Ep 260, 28.69s, prec 99.62%, sm 98.16%, d_ap 1.6988, d_an 2.9429, loss 0.0046
+=====> lr adjusted to 0.0000012051
+Ep 261, 22.24s, prec 99.90%, sm 99.19%, d_ap 1.6701, d_an 2.9570, loss 0.0013
+=====> lr adjusted to 0.0000011509
+Ep 262, 22.16s, prec 99.71%, sm 98.44%, d_ap 1.6752, d_an 2.9681, loss 0.0028
+=====> lr adjusted to 0.0000010991
+Ep 263, 22.00s, prec 99.46%, sm 98.68%, d_ap 1.6905, d_an 2.9595, loss 0.0035
+=====> lr adjusted to 0.0000010496
+Ep 264, 21.89s, prec 99.60%, sm 99.04%, d_ap 1.6646, d_an 2.9699, loss 0.0033
+=====> lr adjusted to 0.0000010024
+
+=========> Test on validation set <=========
+
+Single Query:                 [mAP: 99.37%], [cmc1: 99.51%], [cmc5: 100.00%], [cmc10: 100.00%]
+
+Ep 265, 28.16s, prec 100.00%, sm 99.64%, d_ap 1.6728, d_an 3.0127, loss 0.0002
+=====> lr adjusted to 0.0000009573
+Ep 266, 22.35s, prec 99.93%, sm 98.80%, d_ap 1.6957, d_an 2.9908, loss 0.0020
+=====> lr adjusted to 0.0000009142
+Ep 267, 22.38s, prec 99.80%, sm 98.92%, d_ap 1.6840, d_an 2.9943, loss 0.0018
+=====> lr adjusted to 0.000000873
+Ep 268, 22.29s, prec 99.84%, sm 98.99%, d_ap 1.6644, d_an 2.9840, loss 0.0014
+=====> lr adjusted to 0.0000008337
+Ep 269, 22.43s, prec 99.93%, sm 99.25%, d_ap 1.6851, d_an 3.0014, loss 0.0010
+=====> lr adjusted to 0.0000007962
+
+=========> Test on validation set <=========
+
+Single Query:                 [mAP: 99.29%], [cmc1: 99.51%], [cmc5: 100.00%], [cmc10: 100.00%]
+
+Ep 270, 28.35s, prec 99.37%, sm 98.17%, d_ap 1.6644, d_an 2.9569, loss 0.0055
+=====> lr adjusted to 0.0000007604
+Ep 271, 21.92s, prec 99.77%, sm 98.76%, d_ap 1.6902, d_an 3.0230, loss 0.0022
+=====> lr adjusted to 0.0000007262
+Ep 272, 21.71s, prec 99.64%, sm 98.86%, d_ap 1.6885, d_an 2.9856, loss 0.0036
+=====> lr adjusted to 0.0000006935
+Ep 273, 21.79s, prec 99.87%, sm 98.92%, d_ap 1.6685, d_an 2.9669, loss 0.0015
+=====> lr adjusted to 0.0000006623
+Ep 274, 21.83s, prec 99.50%, sm 97.91%, d_ap 1.6960, d_an 2.9767, loss 0.0049
+=====> lr adjusted to 0.0000006325
+
+=========> Test on validation set <=========
+
+Single Query:                 [mAP: 99.36%], [cmc1: 99.51%], [cmc5: 100.00%], [cmc10: 100.00%]
+
+Ep 275, 28.05s, prec 99.90%, sm 99.19%, d_ap 1.6577, d_an 2.9820, loss 0.0012
+=====> lr adjusted to 0.000000604
+Ep 276, 22.00s, prec 99.84%, sm 98.85%, d_ap 1.6613, d_an 3.0015, loss 0.0018
+=====> lr adjusted to 0.0000005768
+Ep 277, 22.06s, prec 99.74%, sm 99.05%, d_ap 1.6733, d_an 3.0004, loss 0.0021
+=====> lr adjusted to 0.0000005508
+Ep 278, 22.08s, prec 99.14%, sm 98.33%, d_ap 1.6842, d_an 3.0018, loss 0.0065
+=====> lr adjusted to 0.0000005261
+Ep 279, 22.20s, prec 99.93%, sm 99.25%, d_ap 1.6893, d_an 3.0179, loss 0.0010
+=====> lr adjusted to 0.0000005024
+
+=========> Test on validation set <=========
+
+Single Query:                 [mAP: 99.38%], [cmc1: 99.51%], [cmc5: 100.00%], [cmc10: 100.00%]
+
+Ep 280, 28.44s, prec 99.67%, sm 98.76%, d_ap 1.6706, d_an 2.9519, loss 0.0024
+=====> lr adjusted to 0.0000004798
+Ep 281, 22.25s, prec 99.60%, sm 98.91%, d_ap 1.6747, d_an 3.0193, loss 0.0027
+=====> lr adjusted to 0.0000004582
+Ep 282, 21.91s, prec 99.97%, sm 99.64%, d_ap 1.6722, d_an 3.0205, loss 0.0007
+=====> lr adjusted to 0.0000004376
+Ep 283, 21.88s, prec 99.64%, sm 98.53%, d_ap 1.6764, d_an 2.9482, loss 0.0030
+=====> lr adjusted to 0.0000004179
+Ep 284, 21.98s, prec 99.58%, sm 98.56%, d_ap 1.6969, d_an 2.9511, loss 0.0033
+=====> lr adjusted to 0.0000003991
+
+=========> Test on validation set <=========
+
+Single Query:                 [mAP: 99.35%], [cmc1: 99.51%], [cmc5: 100.00%], [cmc10: 100.00%]
+
+Ep 285, 28.20s, prec 99.87%, sm 99.06%, d_ap 1.6796, d_an 2.9688, loss 0.0012
+=====> lr adjusted to 0.0000003811
+Ep 286, 22.31s, prec 99.87%, sm 98.99%, d_ap 1.6865, d_an 3.0023, loss 0.0015
+=====> lr adjusted to 0.0000003639
+Ep 287, 22.39s, prec 99.80%, sm 98.86%, d_ap 1.6687, d_an 2.9641, loss 0.0019
+=====> lr adjusted to 0.0000003476
+Ep 288, 22.34s, prec 99.77%, sm 98.70%, d_ap 1.6714, d_an 2.9916, loss 0.0026
+=====> lr adjusted to 0.0000003319
+Ep 289, 22.35s, prec 99.93%, sm 99.12%, d_ap 1.6954, d_an 3.0137, loss 0.0012
+=====> lr adjusted to 0.000000317
+
+=========> Test on validation set <=========
+
+Single Query:                 [mAP: 99.31%], [cmc1: 99.51%], [cmc5: 100.00%], [cmc10: 100.00%]
+
+Ep 290, 28.76s, prec 99.87%, sm 99.28%, d_ap 1.6658, d_an 2.9842, loss 0.0010
+=====> lr adjusted to 0.0000003027
+Ep 291, 22.01s, prec 99.84%, sm 98.75%, d_ap 1.6667, d_an 2.9602, loss 0.0015
+=====> lr adjusted to 0.0000002891
+Ep 292, 22.00s, prec 99.90%, sm 99.25%, d_ap 1.6677, d_an 3.0160, loss 0.0013
+=====> lr adjusted to 0.0000002761
+Ep 293, 22.07s, prec 99.61%, sm 98.89%, d_ap 1.6779, d_an 2.9778, loss 0.0031
+=====> lr adjusted to 0.0000002637
+Ep 294, 21.86s, prec 99.67%, sm 98.76%, d_ap 1.6930, d_an 3.0215, loss 0.0022
+=====> lr adjusted to 0.0000002518
+
+=========> Test on validation set <=========
+
+Single Query:                 [mAP: 99.30%], [cmc1: 99.51%], [cmc5: 100.00%], [cmc10: 100.00%]
+
+Ep 295, 29.00s, prec 99.80%, sm 99.04%, d_ap 1.6727, d_an 2.9740, loss 0.0016
+=====> lr adjusted to 0.0000002405
+Ep 296, 22.35s, prec 99.77%, sm 99.12%, d_ap 1.6652, d_an 2.9598, loss 0.0016
+=====> lr adjusted to 0.0000002296
+Ep 297, 22.14s, prec 99.90%, sm 98.89%, d_ap 1.6614, d_an 2.9917, loss 0.0013
+=====> lr adjusted to 0.0000002193
+Ep 298, 22.08s, prec 99.80%, sm 99.44%, d_ap 1.6693, d_an 3.0150, loss 0.0011
+=====> lr adjusted to 0.0000002094
+Ep 299, 22.11s, prec 99.77%, sm 98.86%, d_ap 1.6685, d_an 2.9340, loss 0.0023
+=====> lr adjusted to 0.0000002
+
+=========> Test on validation set <=========
+
+Single Query:                 [mAP: 99.32%], [cmc1: 99.51%], [cmc5: 100.00%], [cmc10: 100.00%]
+
+Ep 300, 28.28s, prec 99.67%, sm 98.60%, d_ap 1.6735, d_an 2.9804, loss 0.0029
+
+=========> Test on dataset: market1501 <=========
+
+Extracting feature...
+20/1000 batches done, +2.25s, total 2.25s
+[F[K40/1000 batches done, +2.24s, total 4.49s
+[F[K60/1000 batches done, +2.28s, total 6.78s
+[F[K80/1000 batches done, +2.13s, total 8.91s
+[F[K100/1000 batches done, +2.30s, total 11.21s
+[F[K120/1000 batches done, +2.12s, total 13.33s
+[F[K140/1000 batches done, +2.24s, total 15.57s
+[F[K160/1000 batches done, +2.29s, total 17.87s
+[F[K180/1000 batches done, +2.10s, total 19.96s
+[F[K200/1000 batches done, +2.19s, total 22.15s
+[F[K220/1000 batches done, +2.17s, total 24.32s
+[F[K240/1000 batches done, +2.21s, total 26.53s
+[F[K260/1000 batches done, +2.24s, total 28.77s
+[F[K280/1000 batches done, +2.35s, total 31.12s
+[F[K300/1000 batches done, +2.20s, total 33.32s
+[F[K320/1000 batches done, +2.28s, total 35.60s
+[F[K340/1000 batches done, +2.19s, total 37.80s
+[F[K360/1000 batches done, +2.11s, total 39.90s
+[F[K380/1000 batches done, +2.22s, total 42.12s
+[F[K400/1000 batches done, +2.17s, total 44.29s
+[F[K420/1000 batches done, +2.13s, total 46.42s
+[F[K440/1000 batches done, +2.28s, total 48.70s
+[F[K460/1000 batches done, +2.19s, total 50.89s
+[F[K480/1000 batches done, +2.31s, total 53.20s
+[F[K500/1000 batches done, +2.21s, total 55.41s
+[F[K520/1000 batches done, +2.17s, total 57.58s
+[F[K540/1000 batches done, +2.24s, total 59.82s
+[F[K560/1000 batches done, +2.31s, total 62.13s
+[F[K580/1000 batches done, +2.20s, total 64.33s
+[F[K600/1000 batches done, +2.18s, total 66.51s
+[F[K620/1000 batches done, +2.28s, total 68.79s
+[F[K640/1000 batches done, +2.22s, total 71.01s
+[F[K660/1000 batches done, +2.25s, total 73.26s
+[F[K680/1000 batches done, +2.36s, total 75.62s
+[F[K700/1000 batches done, +2.32s, total 77.94s
+[F[K720/1000 batches done, +2.15s, total 80.10s
+[F[K740/1000 batches done, +2.17s, total 82.27s
+[F[K760/1000 batches done, +2.18s, total 84.45s
+[F[K780/1000 batches done, +2.30s, total 86.75s
+[F[K800/1000 batches done, +2.36s, total 89.11s
+[F[K820/1000 batches done, +2.31s, total 91.42s
+[F[K840/1000 batches done, +2.18s, total 93.60s
+[F[K860/1000 batches done, +2.33s, total 95.94s
+[F[K880/1000 batches done, +2.24s, total 98.17s
+[F[K900/1000 batches done, +2.20s, total 100.37s
+[F[K920/1000 batches done, +2.22s, total 102.59s
+[F[K940/1000 batches done, +2.26s, total 104.85s
+[F[K960/1000 batches done, +2.17s, total 107.03s
+[F[K980/1000 batches done, +2.22s, total 109.24s
+[F[K1000/1000 batches done, +2.08s, total 111.32s
+Done, 111.42s
+Computing distance...
+Done, 2.30s
+Computing scores...
+Done, 15.24s
+Single Query:                 [mAP: 75.29%], [cmc1: 89.04%], [cmc5: 95.72%], [cmc10: 97.12%]
+Multi Query, Computing distance...
+Done, 1.45s
+Multi Query, Computing scores...
+Done, 15.06s
+Multi Query:                  [mAP: 82.18%], [cmc1: 92.99%], [cmc5: 97.33%], [cmc10: 98.28%]
+Re-ranking distance...
+Done, 81.30s
+Computing scores for re-ranked distance...
+Done, 15.59s
+Re-ranked Single Query:       [mAP: 87.82%], [cmc1: 91.57%], [cmc5: 95.37%], [cmc10: 96.56%]
+Multi Query, Re-ranking distance...
+Done, 77.64s
+Multi Query, Computing scores for re-ranked distance...
+Done, 15.53s
+Re-ranked Multi Query:        [mAP: 91.73%], [cmc1: 94.30%], [cmc5: 96.76%], [cmc10: 97.62%]
