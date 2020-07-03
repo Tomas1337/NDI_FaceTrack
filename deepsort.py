@@ -1,7 +1,6 @@
 from deep_sort.deep_sort import nn_matching
 from deep_sort.deep_sort.tracker import Tracker 
 from deep_sort.application_util import preprocessing as prep
-from deep_sort.application_util import visualization
 from deep_sort.deep_sort.detection import Detection
 from reid import Run_Reid
 import numpy as np

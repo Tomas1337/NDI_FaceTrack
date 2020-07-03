@@ -571,9 +571,9 @@ class FaceDetectionWidget(QObject):
                 #If no overlaps, return the first
                 x,y,w,h = boxes[0]
                 return x,y,w,h
-    
-            else:
+            
             #If there is a present base feature already, you have to try and reID the person
+            else:
             #Extract the features of the all the crops
                 try:
                     boxes_n = [boxes[i] for i in idxs[0].tolist()]            #First filter out the detections that have a NMS overlap which is indicated by idxs
@@ -615,7 +615,7 @@ class FaceDetectionWidget(QObject):
                 
                 x,y,w,h = boxes_n[winner]
             
-            #Start the tracker for the given xywh
+            #Start the body tracker for the given xywh
             self.tracker = cv2.TrackerMedianFlow_create()
             self.tracker.init(frame, (x,y,w,h))
             return x,y,w,h
