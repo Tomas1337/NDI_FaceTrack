@@ -10,7 +10,7 @@ NDI Facetracking uses open multiple open source projects to work seamlessly betw
 - OpenCV Object Trackers
 - Custom Tiny Yolov3 PRN 
 - NDI C++  / Python Wrapper Library: https://github.com/buresu/ndi-python
-- 
+
 
 ![Alt text](./styling/NDI_Desktop_Application.jpg?raw=tru?raw=true "Title")
 
