@@ -17,5 +17,5 @@ NDI Facetracking uses open multiple open source projects to work seamlessly betw
 https://github.com/Tomas1337/NDI_FaceTrack
 
 
- An integral part of this project is to have this easily deployable to interested in users hence the need for a robust windows executable file.
-
+An integral part of this project is to have this easily deployable to users in a robust lightweight executable file.
+Currently achieves +30FPS on an QuadCore Intel 2.4GHz
