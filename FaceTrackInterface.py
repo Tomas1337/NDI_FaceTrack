@@ -11,12 +11,10 @@ from ndi_camera import ndi_camera
 import numpy as np
 import NDIlib as ndi
 import cv2, dlib, time, styling, sys
-import ptvsd
-from deepsort import deepsort_rbc
-from deep_sort.deep_sort.nn_matching import _cosine_distance as cosine_distance
-from tool.qrangeslider import QRangeSlider
-from tool.qslider_text import QCustomSlider
 from tool.custom_widgets import *
+from face_tracking.camera_control import *
+import keyboard
+
 
 class MainWindow(QMainWindow):
     signalStatus = pyqtSignal(str)
@@ -35,7 +33,10 @@ class MainWindow(QMainWindow):
 
         #Make any cross object connections
         self._connectSignals()
+        title = "NDI FaceTrack"
+        self.setWindowTitle(title) 
         self.gui.show()
+        self.setFixedSize(700, 750)
 
     def _connectSignals(self):
         self.signalStatus.connect(self.gui.updateStatus)
@@ -86,23 +87,21 @@ class MainWindow(QMainWindow):
         self.face_detector.info_status.connect(self.gui.updateInfo)
         self.face_detector.signalStatus.connect(self.gui.updateStatus)
 
-        self.face_track_signal.connect(self.face_detector.face_track)
+        self.face_track_signal.connect(self.face_detector.main_track)
 
         self.gui.reset_track_button.clicked.connect(self.face_detector.reset_tracker)
         self.gui.azoom_lost_face_button.clicked.connect(self.face_detector.detect_autozoom_state)
+        self.gui.face_lock_button.clicked.connect(self.face_detector.detect_face_lock_state)
         self.gui.y_enable_button.clicked.connect(self.face_detector.detect_ytrack_state)
-        self.gui.x_speed_slider.startValueChanged.connect(self.face_detector.xspeed_min_slider_values)
-        self.gui.x_speed_slider.endValueChanged.connect(self.face_detector.xspeed_max_slider_values)
-        self.gui.y_speed_slider.startValueChanged.connect(self.face_detector.yspeed_min_slider_values)
-        self.gui.y_speed_slider.endValueChanged.connect(self.face_detector.yspeed_max_slider_values)
+        self.gui.gamma_slider.valueChanged.connect(self.face_detector.gamma_slider_values)
         self.gui.x_minE_slider.valueChanged.connect(self.face_detector.xmin_e_val)
-        self.gui.y_minE_slider.valueChanged.connect(self.face_detector.ymin_e_val)
+        self.gui.y_minE_slider.valueChanged.connect(self.face_detector.ymin_e_val)  
+        self.gui.zoom_slider.valueChanged.connect(self.vid_worker.zoom_handler)
         self.gui.face_track_button.clicked.connect(self.vid_worker.detect_face_track_state)
         self.gui.face_track_button.clicked.connect(self.gui.enable_track_buttons)
         self.gui.reset_default_button.clicked.connect(self.gui.reset_defaults_handler)
         self.gui.reset_default_button.click()
-    
-    
+
     def forceWorkerQuit(self):
         if self.worker_thread.isRunning():
             self.worker_thread.terminate()
@@ -125,7 +124,7 @@ class MainWindow(QMainWindow):
 class WindowGUI(QWidget):
     def __init__(self, parent):
         super(WindowGUI, self).__init__(parent)
-        self.label_status = QLabel('Created by: __________', self)
+        self.label_status = QLabel('Created by: JTJTi Digital Video + Radio', self)
         
         #Main Track Button
         self.face_track_button = QTrackingButton('TRACK')
@@ -161,20 +160,27 @@ class WindowGUI(QWidget):
 
         self.reset_track_button = QResetButton(self)
         self.reset_track_button.setDisabled(True)
-        self.reset_track_button.setFixedHeight(40)
+        #self.reset_track_button.setFixedHeight(40)
+        self.reset_track_button.setMinimumWidth(300)
+
+        #Face Lock Button
+        self.face_lock_button = QPushButton('LOCK TO FACE')
+        self.face_lock_button.setCheckable(True)
+        #self.face_lock_button.setFixedHeight(40)
+        #self.face_lock_button.setDisabled(True)
 
         #Y-Axis Tracking
         self.y_enable_button = QToggleButton('Y-Axis Tracking')
         self.y_enable_button.setCheckable(True)
         self.y_enable_button.setChecked(True)
-        self.y_enable_button.setFixedHeight(100)
+        self.y_enable_button.setFixedHeight(70)
         self.y_enable_button.setDisabled(True)
 
         #Lost Auto Zoom Out Buttons
         self.azoom_lost_face_button = QToggleButton('Auto-Find Lost')
         self.azoom_lost_face_button.setCheckable(True)
         self.azoom_lost_face_button.setChecked(True)
-        self.azoom_lost_face_button.setFixedHeight(100)
+        self.azoom_lost_face_button.setFixedHeight(70)
         self.azoom_lost_face_button.setDisabled(True)
 
         #Tracking position buttons
@@ -184,32 +190,42 @@ class WindowGUI(QWidget):
         self.tracking_button_group.addButton(self.right_track_button)
         self.tracking_button_group.setExclusive(True)
 
-        #Speed Sliders
-        x_speed_label = QLabel()
-        x_speed_label.setText('X Min/Max Speed:')
-        self.x_speed_slider = QRangeSlider()
-        self.x_speed_slider.show()
-        self.x_speed_slider.setRange(15, 25)
-        self.x_speed_slider.setDrawValues(True)
-        
-        y_speed_label = QLabel()
-        y_speed_label.setText('Y Min/Max Speed:')
-        self.y_speed_slider = QRangeSlider()
-        self.y_speed_slider.show()
-        self.y_speed_slider.setRange(10,20)
-        self.y_speed_slider.setDrawValues(True)
+        #Gamma Sliders
+        gamma_label = QLabel()
+        gamma_label.setText('Gamma')
+        self.gamma_slider = QSlider()
+        self.gamma_slider.setOrientation(Qt.Horizontal)
+        self.gamma_slider.setValue(6)
+        self.gamma_slider.setTickInterval(10)
+        self.gamma_slider.setMinimum(1)
+        self.gamma_slider.setMaximum(10)
 
         #Minimum Error Slider
         x_minE_label = QLabel()
         x_minE_label.setText('Minimum X-Error:')
         self.x_minE_slider = QSlider()
         self.x_minE_slider.setOrientation(Qt.Horizontal)
-        self.x_minE_slider.setValue(13)
+        self.x_minE_slider.setMinimum(1)
+        self.x_minE_slider.setMaximum(10)
+        self.x_minE_slider.setValue(5)
         y_minE_label = QLabel()
         y_minE_label.setText('Minimum Y-Error:')
         self.y_minE_slider = QSlider()
+        self.y_minE_slider.setMinimum(1)
+        self.y_minE_slider.setMaximum(10)
         self.y_minE_slider.setOrientation(Qt.Horizontal)
-        self.y_minE_slider.setValue(10)
+        self.y_minE_slider.setValue(5)
+
+        #Zoom Slider
+        zoom_slider_label = QLabel()
+        zoom_slider_label.setText('Zoom')
+        self.zoom_slider = QSlider()
+        self.zoom_slider.setOrientation(Qt.Horizontal)
+        self.zoom_slider.setValue(0)
+        self.zoom_slider.setTickInterval(11)
+        self.zoom_slider.setMinimum(0)
+        self.zoom_slider.setMaximum(11)
+        self.zoom_slider.setDisabled(True)
 
         #Reset To Default
         self.reset_default_button = QPushButton('Reset Defaults', self)
@@ -234,44 +250,45 @@ class WindowGUI(QWidget):
         layoutFacePosTrack.setSpacing(5)
         controls_layout.setAlignment(Qt.AlignCenter)
         controls_layout.addLayout(layoutFacePosTrack,1,0,1,-1)
-        
 
         #Additional Options
         secondary_controls_layout = QVBoxLayout()
+        zoom_layout = QHBoxLayout()
+        zoom_layout.addWidget(zoom_slider_label)
+        zoom_layout.addWidget(self.zoom_slider)
+        secondary_controls_layout.addLayout(zoom_layout)
+        #secondary_controls_layout.addWidget(self.face_lock_button)
         secondary_controls_layout.addWidget(self.reset_track_button)
         secondary_controls_layout.setSpacing(5)
-        self.reset_track_button.setMinimumWidth(300)
+        
         toggle_controls_layout = QHBoxLayout()
         toggle_controls_layout.addWidget(self.azoom_lost_face_button)
         toggle_controls_layout.addWidget(self.y_enable_button)
         toggle_controls_layout.setSpacing(7)
-        #toggle_controls_layout.setContentsMargins(0,10,0,0)
         secondary_controls_layout.addLayout(toggle_controls_layout)
         controls_layout.addLayout(secondary_controls_layout,2,0)
         
         #Advanced Options
         adv_options_layout = QGridLayout()
         adv_options_group = QGroupBox('Advanced Controls')
-        adv_options_group.setStyleSheet("QGroupBox {border-style: solid; border-width: 1px; border-color: grey; text-align: left; font-weight:bold; padding-top: 5px;} QGroupBox::title {right:120px; bottom : 6px;margin-top:4px;}")
+        adv_options_group.setStyleSheet("QGroupBox {border-style: solid; border-width: 1px; border-color: grey; text-align: left; font-weight:bold; padding-top: 5px;} QGroupBox::title {right:100px; bottom : 6px;margin-top:4px;}")
         adv_options_group.setCheckable(True)
         adv_options_group.setChecked(False)
         adv_options_layout.setSpacing(7)
-        adv_options_layout.addWidget(x_speed_label, 1,1)
-        adv_options_layout.addWidget(y_speed_label, 2,1)
-        adv_options_layout.addWidget(x_minE_label, 3,1)
-        adv_options_layout.addWidget(y_minE_label, 4,1)
-        adv_options_layout.addWidget(self.x_speed_slider,1,2)
-        adv_options_layout.addWidget(self.y_speed_slider,2,2)
-        adv_options_layout.addWidget(self.x_minE_slider,3,2)
-        adv_options_layout.addWidget(self.y_minE_slider,4,2) 
-        adv_options_layout.addWidget(self.reset_default_button,5,2) 
+        adv_options_layout.addWidget(gamma_label, 1,1)
+        adv_options_layout.addWidget(x_minE_label, 2,1)
+        adv_options_layout.addWidget(y_minE_label, 3,1)
+        adv_options_layout.addWidget(self.gamma_slider,1,2)
+        adv_options_layout.addWidget(self.x_minE_slider,2,2)
+        adv_options_layout.addWidget(self.y_minE_slider,3,2) 
+        adv_options_layout.addWidget(self.reset_default_button,4,2) 
         adv_options_group.setLayout(adv_options_layout)
         controls_layout.addWidget(adv_options_group,2,1)
 
         layout.addStretch(1)
         layout.addWidget(self.label_status)
         
-        self.setFixedSize(700, 750)
+        #self.setFixedSize(700, 720)
 
     @pyqtSlot(str)
     def updateStatus(self, status):
@@ -308,20 +325,17 @@ class WindowGUI(QWidget):
             self.left_track_button.setEnabled(state)
             self.right_track_button.setEnabled(state)
 
-
     def reset_defaults_handler(self, state):
-        self.x_speed_slider.setStart(15)
-        self.x_speed_slider.setEnd(25)
-        self.y_speed_slider.setStart(10)
-        self.y_speed_slider.setEnd(20)
-        self.x_minE_slider.setValue(13)
-        self.y_minE_slider.setValue(13)
+        self.gamma_slider.setValue(6)
+        self.x_minE_slider.setValue(0.5)
+        self.y_minE_slider.setValue(0.5)
 
     def enable_controls(self):
         self.face_track_button.setEnabled(True)
         self.reset_track_button.setEnabled(True)
         self.y_enable_button.setEnabled(True)
         self.azoom_lost_face_button.setEnabled(True)
+        self.zoom_slider.setEnabled(True)
 
 class WorkerObject(QObject):
     signalStatus = pyqtSignal(str)
@@ -351,18 +365,6 @@ class WorkerObject(QObject):
         self.info_status.emit('Signal: {}'.format(self.ptz_names[int-1]))
         self.enable_controls_signal.emit()
 
-class csv_save(object):
-    def __init__(self,parent = None):
-        import csv
-        self.csvFile = open('sample.csv', 'w')
-        self.field_names = ['X_Error', 'Y_Error','X_Speed','Y_Speed', 'ObjX', 'ObjY', 'Frame_Count'] 
-        self.writer = csv.writer(self.csvFile)
-
-    def update(self, X_Error, Y_Error,X_Speed,Y_Speed, ObjX, ObjY, Frame_Count):
-        self.writer.writerow([X_Error, Y_Error,X_Speed,Y_Speed, ObjX, ObjY, Frame_Count])
-        self.writer.writerow([])
-        self.csvFile.flush()
-
 #Handles the reading and displayingg of video
 class Video_Object(QObject):
     PixMapSignal = pyqtSignal(QImage)
@@ -374,6 +376,7 @@ class Video_Object(QObject):
         self.face_track_state = False
         self.frame_count = 1
         self.skip_frames = 1
+        self.keypress = False
 
     @pyqtSlot(object)
     def read_video(self, ndi_object):
@@ -390,6 +393,47 @@ class Video_Object(QObject):
                 frame = cv2.resize(frame, (int(frame.shape[1] * resize_factor), int(frame.shape[0] * resize_factor)))
                 #Code to process the GUI events before proceeding
                 QApplication.processEvents()
+
+                camera_move_speed = 0.3
+                camera_zoom_speed = 0.9
+
+                if keyboard.is_pressed('e') and not self.keypress:
+                    self.zoom_camera_control(camera_zoom_speed)
+                    self.keypress=True
+                elif self.keypress and not keyboard.is_pressed('e'):
+                    self.keypress = False
+                    self.zoom_camera_control(0.0)
+                elif keyboard.is_pressed('q') and not self.keypress:
+                    self.zoom_camera_control(camera_zoom_speed * -1)
+                    self.keypress=True
+                elif self.keypress and not keyboard.is_pressed('q'):
+                    self.keypress = False
+                    self.zoom_camera_control(0.0)
+                elif keyboard.is_pressed('w') and not self.keypress:
+                    self.camera_control(0.0,camera_move_speed)
+                    self.keypress=True
+                elif self.keypress and not keyboard.is_pressed('w'):
+                    self.keypress = False
+                    self.camera_control(0.0,0.0)
+                elif keyboard.is_pressed('s') and not self.keypress:
+                    self.camera_control(0.0,camera_move_speed*-1)
+                    self.keypress=True
+                elif self.keypress and not keyboard.is_pressed('s'):
+                    self.keypress = False
+                    self.camera_control(0.0,0.0)
+                elif keyboard.is_pressed('a') and not self.keypress:
+                    self.camera_control(camera_move_speed,0.0)
+                    self.keypress=True
+                elif self.keypress and not keyboard.is_pressed('a'):
+                    self.keypress = False
+                    self.camera_control(0.0,0.0)
+                elif keyboard.is_pressed('d') and not self.keypress:
+                    self.camera_control(camera_move_speed * -1,0.0)
+                    self.keypress=True
+                elif self.keypress and not keyboard.is_pressed('d'):
+                    self.keypress = False
+                    self.camera_control(0.0,0.0)
+
                 if self.face_track_state == False:
                     self.display_plain_video(frame)
                 elif self.face_track_state == True:
@@ -415,13 +459,17 @@ class Video_Object(QObject):
     @pyqtSlot(float, float)
     def camera_control(self, Xspeed, Yspeed):
         #Camera Control
-        for i in range(1,3):
+        for i in range(1,2):
             ndi.recv_ptz_pan_tilt_speed(self.ndi_recv, Xspeed, Yspeed)
         #ndi.recv_ptz_pan_tilt_speed(self.ndi_recv, 0, 0)
 
     @pyqtSlot(float)
     def zoom_camera_control(self, ZoomValue):
         ndi.recv_ptz_zoom_speed(self.ndi_recv, ZoomValue)
+
+    @pyqtSlot(int)
+    def zoom_handler(self, ZoomLevel):
+        ndi.recv_ptz_zoom(self.ndi_recv, ZoomLevel/10   )
 
 class FaceDetectionWidget(QObject):
     DisplayVideoSignal = pyqtSignal(QImage)
@@ -440,14 +488,15 @@ class FaceDetectionWidget(QObject):
         self.track_coords = []
         self.prev_X_Err = None
         self.prev_Y_Err  = None
-        self.check_frames_num  = 60
+        self.check_frames_num  = 3600 #Test this out
+        #self.check_frames_num = 60
         self.matching_threshold = 0.02
         self.base_feature = None
         self.btrack_ok = False
-        self.deepsort = deepsort_rbc()
+        self.focal_length = 129
 
         #Logging purposes
-        self.writer = csv_save()
+        #self.writer = csv_save()
 
         #Counters
         self.frame_count = 1
@@ -460,40 +509,63 @@ class FaceDetectionWidget(QObject):
         #Trackers
         self.tracker = None
         self.f_tracker = None
+        self.face_lock = Face_Locker()
 
         #Object Detectors
-        self.face_obj = FastMTCNN()
+        self.face_obj = FastMTCNN() #TRY THIS FIRST
         self.body_obj = Yolov3()
 
         #Slider and button Values
         self.y_trackState = True
         self.yminE = 0.13
         self.xminE = 0.13
-        self.yspeed_min = 0.10 
-        self.yspeed_max = 0.20
-        self.xspeed_min = 0.15 
-        self.xspeed_max = 0.25
+        self.gamma = 0.6 
         self.ZoomValue = 0.0
         self.autozoom_state = True
+        self.face_lock_state = False
         self.zoom_state = 0
+        self.face_coords = []
 
+    def face_tracker(self, frame):
+        #ptvsd.debug_this_thread()
+        """
+        Do a check every 5 seconds
+            If there are detections, check to see if the new detections overlap the current face_coordinates. 
+                If it does overlap, then refresh the self.face_coords with the new test_coords
+                If no overlap, then refresh the tracker so that it conducts a whole frame search
+            If no detections in the body frame, detect on whole frame
+                If there are face detections from the whole frame, return the face with the highest confidence
+                Else, empty the face tracker and return []
 
-    def face_tracker(self, frame, body_coords):
-        ptvsd.debug_this_thread()
+        Check to see if tracker is ok
+            Track Current face
 
+        If track is not ok:
+            Add to the lost face count
+            When face Count reaches N, it empties the face_tracker
+        """
         if not self.f_tracker is None:
             tic = time.time()
             ok, position = self.f_tracker.update(frame)
+            #print("Face Tracker update takes:{:.2f}s".format(time.time() - tic))
+            if self.frame_count % 300== 0:
+                print('Running a {}s check'.format(300/30))
+                #test_coords = self.face_obj.update(frame)
+                test_coords = self.face_obj.get_all_locations(frame)
 
-            #Refresh face detector every N Frames
-            if self.frame_count % 240 == 0 and self.btrack_ok is True:
-                print('Refreshing Face Detector ')
-                self.f_tracker = None
-                return []
+                if len(test_coords) > 0: #There are detections
+                    print('testing here')
+                    for i, j in enumerate(test_coords):
+                        if self.overlap_metric(j, self.face_coords) >= 0.75:
+                            x,y,w,h = j
+                            break
+                    return []
+
+                else: #No detections
+                    print('testing here 2')
+                    self.f_tracker = None
+                    return []
             
-            elif self.frame_count % 600 == 0 and self.btrack_ok is False:
-                self.f_tracker = None
-
             elif ok:
                 x = int(position[0])
                 y = int(position[1])
@@ -502,8 +574,7 @@ class FaceDetectionWidget(QObject):
                 cv2.rectangle(frame, (x,y), (x+w,y+h), (255,0,0), 1)
                 x,y,w,h = [0 if i < 0 else i for i in [x,y,w,h]]
                 self.f_track_count = 0
-                self.face_coords = x,y,w,h
-                return x,y,w,h
+                face_coords = x,y,w,h
                 
             else:
                 if self.f_track_count > 5:
@@ -515,165 +586,82 @@ class FaceDetectionWidget(QObject):
                     self.f_track_count += 1
                     return []
 
-        elif len(body_coords) <= 0 or body_coords == None:
-            return []
-
         elif self.f_tracker is None:
-            #Detect a face
-            self.face_coords = self.face_obj.update(frame, body_coords)
-
-            if len(self.face_coords) > 0:
-                x,y,w,h = self.face_coords
+            """
+            Detect a face inside the body Coordinates
+            If no detections in the body frame, detect on whole frame which gets the face detection with the strongest confidence
+            """
+            if self.frame_count % 30 == 0:
+                face_coords = self.face_obj.update(frame)
             else:
-                return []
+                face_coords = []
+                
+            if len(face_coords) > 0:
+                x,y,w,h = face_coords
+            else:
+               return []
 
             #Start a face tracker
             self.f_tracker = cv2.TrackerCSRT_create()
             self.f_tracker.init(frame, (x,y,w,h))
             print('Initiating a face tracker')
-            return x,y,w,h
+
+        self.face_coords = x,y,w,h
+        return x,y,w,h
 
     def body_tracker(self, frame, centerX, centerY):
-        ptvsd.debug_this_thread()
-        
-        #Check if there is a tracker already. If None:
+        #ptvsd.debug_this_thread()
         if self.tracker is None:
-            #Detect Objects YOLO
-            (idxs, boxes, _, _, classIDs, confidences) = self.body_obj.update(frame, (centerX, centerY))
-            print('Running a YOLO')
+            #Detect Objects using YOLO every 1 second if No Body Tracker    
+            boxes = []
+            if self.frame_count % 15 == 0:
+                (idxs, boxes, _, _, classIDs, confidences) = self.body_obj.update(frame, (centerX, centerY))
+                print('Running a YOLO')
 
-            if len(boxes) == 0:
-                print('No detections. Returning')
+            if len(boxes) <= 0:
                 return []
-    
-            #Asks if there is base_feature(that came from the previous tracker), hence to focus on on the strongest detection
-            elif self.base_feature is None:
-                print('here')
-                winner = confidences.index(max(confidences))
-                x,y,w,h = [int(i) for i in boxes[winner]]
-                x,y,w,h = [0 if i < 0 else i for i in [x,y,w,h]]
-                cv2.rectangle(frame, (x,y), (x+w,y+h), (255,0,0), 2)
-            
-                #Extract features of the object
-                #self.base_feature, _ = self.deepsort.extract_features_only(frame,(x,y,w,h))
-            
-            #Ask if there is a tracked face inside the predicted bounding box, if there is, choose that
-            elif not self.f_tracker is None:
-                #Check the overlaps.
-                for i, h in enumerate(boxes):
-                    if self.overlap_metric(h, self.face_coords) >= 0.75:
+
+            elif len(boxes) == 1:
+                x,y,w,h = boxes[np.argmax(confidences)]
+                x,y,w,h = [0 if i < 0 else int(i) for i in [x,y,w,h]]
+
+            elif len(boxes) > 1 and len(self.face_coords) >= 1:
+                for i, g in enumerate(boxes):
+                    if self.overlap_metric(g, self.face_coords) >= 0.5:
+                        x,y,w,h = [0 if i < 0 else int(i) for i in [x,y,w,h]]
                         x,y,w,h = [int(p) for p in boxes[i]]
-                        x,y,w,h = [0 if p < 0 else p for p in [x,y,w,h]]
-                        self.tracker = cv2.TrackerMedianFlow_create()
-                        self.tracker.init(frame, (x,y,w,h))
-                        return x,y,w,h
+                        break
 
-                #If no overlaps, return the first
-                x,y,w,h = boxes[0]
-                return x,y,w,h
-            
-            #If there is a present base feature already, you have to try and reID the person
-            else:
-            #Extract the features of the all the crops
-                try:
-                    boxes_n = [boxes[i] for i in idxs[0].tolist()]            #First filter out the detections that have a NMS overlap which is indicated by idxs
-                except NameError:
-                    boxes_n = boxes
-                
-                test_features_ls = []
-
-                #Extract features of each detection box and append to (test_features_ls)
-                for i in boxes_n:
-                    _x,_y,_w,_h = i
-                    _x,_y,_w,_h  = [0 if p < 0 else p for p in i]
-                    #print("Coords: {}".format(_x,_y,_w,_h))
-                    test_features, _ = self.deepsort.extract_features_only(frame,(_x,_y,_w,_h))
-                    test_features = test_features.reshape(1,2048)
-                    test_features_ls.append(test_features)
-                
-                #create the cost matrix between the base_feature and the features that come from the detecion boxes
-                t_f = np.array(test_features_ls).reshape(len(test_features_ls),2048)
-                cost_matrix = cosine_distance(self.base_feature, t_f)
-
-                #print('Cosine Matrix of RE-ID-ing:{}'.format(cost_matrix))
-                if np.amin(cost_matrix) <= self.matching_threshold*0.75 and self.tracking_confirm <= 5:
-                    self.tracking_confirm += 1
-
-                #Get the index of the lowest cost(best matching) if the lowest is less thant the matching threshold
-                elif np.amin(cost_matrix) <= self.matching_threshold*0.75 and self.tracking_confirm >= 5:
-                    winner = divmod(cost_matrix.argmin(), cost_matrix.shape[1])[1]
-                    self.tracking_confirm = 0
-                else:
-                    return []
-
-                #If you cannot find a suitable match
-                if not 'winner' in locals():
-                    return []
-                elif winner is None:
-                    print("Cannot find match")
-                    return []
-                
-                x,y,w,h = boxes_n[winner]
-            
             #Start the body tracker for the given xywh
-            self.tracker = cv2.TrackerMedianFlow_create()
-            self.tracker.init(frame, (x,y,w,h))
+            self.tracker = cv2.TrackerKCF_create()
+            try:
+                self.tracker.init(frame, (x,y,w,h))
+            except UnboundLocalError:
+                return []
             return x,y,w,h
 
         #If theres a tracker already            
         elif not self.tracker is None:
-            tic = time.time()
-
+            tic = time.time()       
             self.btrack_ok, position = self.tracker.update(frame)
-
+            #print("Body Tracker update takes:{:.2f}s".format(time.time() - tic))
             if self.btrack_ok:
                 x = int(position[0])
                 y = int(position[1])
                 w = int(position[2])
                 h = int(position[3])
                 x,y,w,h = [0 if i < 0 else i for i in [x,y,w,h]]
-                #print("b_tracker coords: {}".format((x,y,w,h)))
-                # boxes = np.multiply(boxes,(1/resize))
-                # [x,y,w,h] = boxes.astype(int)
 
             else:
                 print('Tracking Fail')
                 return []
         
             cv2.rectangle(frame, (x,y), (x+w,y+h), (255,255,255), 2)
-
-            #After X frames, run a check if that object is still the same
-            if self.frame_count%self.check_frames_num == 0:
-                self.tracker = None
-                # active_target_feature, _ = self.deepsort.extract_features_only(frame, (x,y,w,h))
-                # cost_matrix = cosine_distance(self.base_feature, active_target_feature)
-                # #Measure the cosine distance between hthe original feature, and the features of the current object
-                # min_val = np.amin(cost_matrix)
-                # if min_val <= self.matching_threshold:
-                #     print("Checking present tracker: Match Success with Cost of: {}".format(min_val))
-                #     self.lost_t = 0
-                #     #Add to the pool of base features if within adding threshold(=0.5 * matching_threshold)
-                #     if (min_val > self.matching_threshold*0.5) & (min_val < self.matching_threshold):
-                #         self.base_feature = np.concatenate((self.base_feature, active_target_feature))
-                #         self.base_feature = self.base_feature[:3] #Save only 3 features
-                #         print("Adding to base features")
-                    
-                # else:
-                #     print("Current feature is not a Match. The cost matrix is {}".format(min_val))
-                #     if self.lost_t >= 2:
-                #         #self.base_feature = None
-                #         self.tracker = None
-                #         self.lost_t = 0
-                #         print('Cannot find match. Resetting Body Feature')
-                #     else:
-                #         self.lost_t +=1
-
             return x,y,w,h
-            
 
     @pyqtSlot(list)
-    def face_track(self, _list):
-        ptvsd.debug_this_thread()
+    def main_track(self, _list):
+        #ptvsd.debug_this_thread()
         self.track_coords = []
         start = time.time()
         frame = _list[0]
@@ -695,31 +683,67 @@ class FaceDetectionWidget(QObject):
             centerX = int(W//1.33)
         elif center_slot == 'center':
             pass
-
+        cv2.circle(frame,(centerX, centerY), 3, (255,255,255), 2)
+        
         #Trackers
-        tic1 = time.time()
-        body_coords = self.body_tracker(frame, centerX, centerY)
-        tic2 = time.time()
-        face_coords = self.face_tracker(frame, body_coords)
-        print("Body Coordinates took: {:.3f}s. Face Coordinates took {:.3f}s".format(tic2-tic1, time.time() - tic2))
-        self.auto_zoom_handler(self.zoom_state, frame, face_coords, body_coords)
-         
-        #If the overlap is less than 0.5, Rerun Object detection.
-        if not (len(body_coords) > 0 and len(face_coords) > 0):
-            pass
-        else:
-            self.overlap = self.overlap_metric(body_coords, face_coords)
-            if self.overlap <= 0.05:
-                if self.overlap_counter > 120:
-                    print('Overlap Body Reset triggered')
-                    self.tracker = None
-                    self.overlap_counter = 0
-                elif self.overlap_counter > 60:
-                    print('Overlap Face Reset triggered')
-                    #self.tracker = None
-                    self.f_tracker = None
-                else: 
-                    self.overlap_counter +=1
+        face_coords = self.face_tracker(frame)
+        if len(face_coords) <= 0:
+            body_coords = self.body_tracker(frame, centerX, centerY)
+    
+        #Face Locking
+        """
+        Check if the face_lock button is activated
+        If activated, check if we have something locked on already
+            If yes, check to see if current face matches any of the known_face_encodings
+            If it does not match:
+                Scan the whole frame for faces and put into a list the detected face_coords
+                Loop on each face coord:
+                    Extract encodings of face coord
+                    Check to see if looped encoding have matches in the known_face_encodings
+                This will output the matches list which contains:
+                    Results = [False, False, Index]
+                    False means no match of current face to known face encodings
+                    Index means best index match of current faces among the known faces
+                Get the first non False Value
+                Use that to change to the new face_coords
+
+            If not locked on; This assumes that you want to register a new face
+                Try to register new face
+                If able to register new face, change the face_locked_on state to True
+
+        """
+        self.face_lock_state = False
+        if self.face_lock_state is True and self.frame_count%30==0:        
+            if self.face_lock.face_locked_on is True:
+                #Check to see if detected face matches the list of known faces
+                current_face_encoding = self.face_lock.face_encode(frame, face_coords)
+                if self.face_lock.does_it_match(current_face_encoding) is not False:
+                    print("Current face Matches")
+                    pass
+                else:
+                    print('Current Face does not match')
+                    temp_face_coords = self.face_obj.get_all_locations(frame)
+                    results = []
+                    for i in temp_face_coords:
+                        current_face_encoding = self.face_lock.face_encode(frame, [i])
+                        result = self.face_lock.does_it_match(current_face_encoding)
+                        results.append(result)
+                    
+                    if any(results) != False:
+                        f = next((i for i, x in enumerate(results) if x), None) 
+                        face_coords = temp_face_coords[f]
+
+                    else:
+                        face_coords = []
+
+            elif self.face_lock.face_locked_on is False:
+                ok_register = self.face_lock.register_new_face(frame, face_coords)
+                self.face_lock.face_locked_on = ok_register
+                
+                if ok_register:
+                    print('Sucessfully registerd new face')
+                else:
+                    print('Failed to register new face')
 
         #Cascade to choose between whether to home to face or body. 
         #Face tracking takes priority
@@ -733,7 +757,7 @@ class FaceDetectionWidget(QObject):
                 self.track_coords = [x,y,x+w,y+h]
                 self.info_status.emit('Tracking Body')
                 self.overlap_counter = 0
-            except ValueError:
+            except (ValueError, UnboundLocalError) as e:
                 pass
         
         #Normal Tracking
@@ -748,82 +772,45 @@ class FaceDetectionWidget(QObject):
 
         #Initiate Lost Tracking sub-routine
         else:
-            if self.lost_tracking > 100 and self.lost_tracking < 500 and self.autozoom_state: #and not self.base_feature is None:
-                print('AutoZoom State: {}'.format(self.autozoom_state))
-                print("Initiating lost track sequence with zoom")
+            if self.lost_tracking > 100 and self.lost_tracking < 500 and self.autozoom_state:
                 self.info_status.emit("Lost Tracking Sequence Secondary")
                 self.CameraZoomControlSignal.emit(-0.7)
 
-            elif self.lost_tracking < 15:
+            elif self.lost_tracking < 20:
                 objX = self.last_loc[0]
                 objY = self.last_loc[1]
                 self.lost_tracking += 1
                 print('Lost tracking. Going to last known location of object')
                 self.info_status.emit("Lost Tracking Sequence Initial")
-                self.CameraZoomControlSignal.emit(0.0)
+                #self.CameraZoomControlSignal.emit(0.0)
 
             else:
                 objX = centerX
                 objY = centerY
                 print('Lost object. Centering')
-                self.info_status.emit("Lost Object. Please manually re-center subject")
+                self.info_status.emit("Lost Object. Recenter subject")
                 self.lost_tracking += 1
-                self.CameraZoomControlSignal.emit(0.0)
+                #self.CameraZoomControlSignal.emit(0.0)
                 if self.lost_tracking < 500 and self.lost_tracking%100:
                     self.tracker = None
 
-        
-        cv2.circle(frame,(centerX, centerY), 3, (255,255,255), 2)
         #Convert to qimage then send to display to GUI
         self.image = self.get_qimage(frame)
         self.DisplayVideoSignal.emit(self.image)
 
-        ## CAMERA CONTROL ##
-        Xerror = (centerX - objX)/W
-        Yerror = (centerY - objY)/H
-        
-        if self.prev_X_Err == None or self.prev_Y_Err == None:
-            self.prev_X_Err = Xerror
-            self.prev_Y_Err = Yerror
+        ## CAMERA CONTROL
+        x_controller = PTZ_Controller_Novel(self.focal_length, self.gamma)
+        x_speed = x_controller.omega_tur_plus1(objX, centerX, RMin = 0.1)
 
-        Xspeed = self.error_speed_translation(Xerror, self.prev_X_Err, RMin = self.xminE, TMin = self.xspeed_min, TMax = self.xspeed_max)
-        Yspeed = self.error_speed_translation(Yerror, self.prev_Y_Err, RMin = self.yminE, TMin = self.yspeed_min, TMax = self.yspeed_max, penalty = 0.50)
-        self.prev_X_Err = Xerror
-        self.prev_Y_Err = Yerror
-        
+        y_controller = PTZ_Controller_Novel(self.focal_length, self.gamma)
+        y_speed = y_controller.omega_tur_plus1(objY, centerY, RMin = 0.1, RMax=7.5)
+        #y_speed = 0
         if self.y_trackState is False:
-            Yspeed = 0
-             
-        self.CameraControlSignal.emit(Xspeed, Yspeed)
-        #print("Camera speed: {} {}".format(Xspeed, Yspeed))
+            y_speed = 0
+
+        self.CameraControlSignal.emit(x_speed, y_speed)
         #self.writer.update(Xerror, Yerror,Xspeed,Yspeed, objX, objY, self.frame_count)
         self.frame_count += 1
-
-    def auto_zoom_handler(self, state, frame, face_coords, body_coords):
-        ptvsd.debug_this_thread()
-        W,H = frame.shape[:2]
-
-        #Dicitionary for face/body scales
-        zoom_dict={0:0, 1:0.80, 2:0.30, 3:0.50, 4: 0.60}
-
-        if state == 1 and len(body_coords) > 0:
-            w,h = body_coords[2], body_coords[3]
-            curr_body_percent = 1 - (H-h)/H
-            target = zoom_dict.get(state)
-            error = target - curr_body_percent
-            print("State: {}, Curr body Percent: {}, error {}, target {}, height{}".format(state, curr_body_percent, error, target, h))
-        
-        elif state >= 2 and len(face_coords) > 0:
-            w,h = face_coords[2], face_coords[3]
-            curr_face_percent = 1 - (H-h)/H
-            print("Current f_prop: {}".format(curr_face_percent))
-            target = zoom_dict.get(state)
-            error = target - curr_face_percent
-            print("State: {}, Curr body Percent: {}, error {}, target {}, height{}".format(state, curr_face_percent, error, target, h))
-        else: return
-
-        zoom_speed = self.error_speed_translation(error, TMin = 0.2, TMax= 0.5)
-        self.CameraZoomControlSignal.emit(zoom_speed)
 
     def get_qimage(self, image):
         height, width, _ = image.shape
@@ -861,60 +848,31 @@ class FaceDetectionWidget(QObject):
         #print(iou)
         return iou
 
-    def error_speed_translation(self, Error, prev_err = None, RMin = 0.15, RMax = 1.0, TMin = 0.05, TMax = 0.80, penalty = 0.15):
-        '''
-        #RMin  Minimum error for Speed Adjustment, also means that it will default to 0 if the error is < 15 %
-        RMax  Maximum error #100%
-        TMin  Minium Scaling #This means it has a TMin% speed
-        TMax  Maximum Scaling #This means it has a max TMax% speed
-        '''
-        if not prev_err is None:
-            penalty = 0.20 * (prev_err - Error)
-            #print("Penalty: {}".format(penalty))
-        else:
-            penalty = 0
-
-        if Error <= RMin -0.01 and Error >= (-1 * RMin) + 0.01:
-            Speed = 0
-        
-        else:
-            #Check if Negative:
-            if Error < 0:
-                Error = abs(Error)
-                Speed = (((Error - RMin) / (RMax - RMin)) * (TMax - TMin)) + TMin - penalty
-                Speed = Speed * -1
-            else:
-                Speed = (((Error - RMin) / (RMax - RMin)) * (TMax - TMin)) + TMin - penalty
-
-        return Speed
+    @pyqtSlot(int)
+    def zoom_handler(self, ZoomLevel):
+        """
+        Range is 129mm to 4.3mm
+        When Zoom Level is 0, it is = 129mm
+        When Zoom level is 10, it is = 4.3mm
+        Values in between might not be linear so adjust from there
+        """
+        zoom_dict = {0:129, 1:116.53, 2:104.06, 3:91.59, 4: 79.12,5:66.65, 6:54.18, 7:41.71, 8:29.24, 9:16.77, 10:4.3}
+        self.focal_length = zoom_dict.get(ZoomLevel)
 
     @pyqtSlot(int)
-    def xspeed_min_slider_values(self, xspeed_min):
-        self.xspeed_min = xspeed_min / 100
-
-    @pyqtSlot(int)
-    def xspeed_max_slider_values(self, xspeed_max):
-        self.xspeed_max = xspeed_max / 100
-
-    @pyqtSlot(int)
-    def yspeed_min_slider_values(self, yspeed_min):
-        self.yspeed_min = yspeed_min / 100
-
-    @pyqtSlot(int)
-    def yspeed_max_slider_values(self, yspeed_max):
-        self.yspeed_max = yspeed_max / 100
+    def gamma_slider_values(self, gamma):
+        self.gamma = gamma / 10
 
     @pyqtSlot(int)
     def xmin_e_val(self, xminE):
-        self.xminE = xminE / 100
+        self.xminE = xminE / 10
 
     @pyqtSlot(int)
     def ymin_e_val(self, yminE):
-        self.yminE = yminE / 100
+        self.yminE = yminE / 10
 
     @pyqtSlot()
     def reset_tracker(self):
-        self.deepsort.reset_tracker()
         self.base_feature = None
         self.tracker = None
         self.f_tracker = None
@@ -922,6 +880,10 @@ class FaceDetectionWidget(QObject):
     @pyqtSlot(bool)
     def detect_autozoom_state(self, state):
         self.autozoom_state = state
+
+    @pyqtSlot(bool)
+    def detect_face_lock_state(self, state):
+        self.face_lock_state = state
 
     @pyqtSlot(int)
     def detect_zoom_state(self, state):
@@ -931,9 +893,7 @@ class FaceDetectionWidget(QObject):
     def detect_ytrack_state(self, state):
         self.y_trackState = state
 
-
-
-if __name__ == '__main__':
+def main():
     app = QApplication(sys.argv)
     style_file = QFile("styling/dark.qss")
     style_file.open(QFile.ReadOnly | QFile.Text)
@@ -942,3 +902,6 @@ if __name__ == '__main__':
     main = MainWindow()
     main.show()
     sys.exit(app.exec_())
+
+if __name__ == '__main__':
+    main()

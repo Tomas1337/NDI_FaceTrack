@@ -4,14 +4,10 @@ from deep_sort.application_util import preprocessing as prep
 from deep_sort.deep_sort.detection import Detection
 from reid import Run_Reid
 import numpy as np
-
-import matplotlib.pyplot as plt
-
 import torch
 import torchvision
 from scipy.stats import multivariate_normal
 from pathlib import Path
-import ptvsd
 
 def get_gaussian_mask():
     #128 is image size
@@ -106,7 +102,6 @@ class deepsort_rbc():
         return crops
 
     def extract_features_only(self,frame,coords):
-        ptvsd.debug_this_thread()
 
         # for i in range(len(coords)):
         #     if coords[i] <0:
@@ -155,8 +150,6 @@ class deepsort_rbc():
         return features,corrected_crop
 
     def run_deep_sort(self, frame, out_scores, out_boxes):
-        ptvsd.debug_this_thread()
-
         #If no current detections are present
         if out_boxes==[]:
 

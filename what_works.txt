@@ -1,0 +1,46 @@
+
+
+
+Bugs:
+1. Secondary Lost trackign sequence constantly moves the camera to the side when 'left' or 'right' tracking.
+
+
+
+##07/15
+1. Build using venv_0715
+	Add: facenet_pytorch
+	Add: modified torchvision
+	Add: torch_python.dll
+	Edit: torch with torch.jit._script_if_tracing
+	Edit: torchvision with torch.jit._script_if_tracing
+
+	The changes are @torch.jit.script to torch.jit._script_if_tracing in torch and torchvision
+	Add the torch.jit._script_if_tracing method
+
+## 07/12
+1. Build using venv_0705
+	Add: facenet_pytorch
+	Add: torchvision
+	Add: face_recogntion
+	Addl face_recogntion_models
+
+
+
+## 07/06
+1. Build using venv_0705
+	Add: facenet_pytorch
+	The changes are @torch.jit.script to torch.jit._script_if_tracing in torch and torchvision
+	Add the torch.jit._script_if_tracing method
+
+
+## 07/05 
+## 
+1. Build using Global and pyinstaller
+	Use: Global Torch (1.5.0)
+	Use: Global torchvision	(0.6.0)
+	Use: Work_env scipy
+	Use: Work_env cv2
+	Add: facenet_pytorch
+
+
+

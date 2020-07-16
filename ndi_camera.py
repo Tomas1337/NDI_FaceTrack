@@ -49,12 +49,12 @@ class ndi_camera:
         for i, src in enumerate(self.sources):
             #Connect to each source to receive meta_data
             ndi.recv_connect(self.ndi_recv, src)
-            _,v,_,_ = ndi.recv_capture_v2(self.ndi_recv, 10000)
+            _,self.v,_,_ = ndi.recv_capture_v2(self.ndi_recv, 10000)
 
             #if positive
             if ndi.recv_ptz_is_supported(self.ndi_recv):
                 print('PTZ camera found')
-                ndi.recv_free_video_v2(self.ndi_recv, v)
+                ndi.recv_free_video_v2(self.ndi_recv, self.v)
                 ptz_list.append(i)
 
             else:
@@ -65,7 +65,7 @@ class ndi_camera:
     def camera_connect(self, src):
         #Connect to the object
         ndi.recv_connect(self.ndi_recv, self.sources[src])
-
+        ndi.recv_free_video_v2(self.ndi_recv, self.v)
         #Destory the find object
         ndi.find_destroy(self.ndi_find)
         print("Camera connected")

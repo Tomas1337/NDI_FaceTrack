@@ -4,82 +4,83 @@ import time
 import numpy as np
 from facenet_pytorch import MTCNN
 from imutils.object_detection import non_max_suppression
-import ptvsd
-#from tool.darknet2pytorch import Darknet
+#import face_recognition
+import os
+#import ptvsd
+import time
 
 class FastMTCNN(object):
     """Fast MTCNN implementation."""
     
     def __init__(self):
-        self.resize = 1
+        self.resize = 0.5
         self.mtcnn = MTCNN(margin = 14, factor = 0.6, keep_all= True,post_process=True, select_largest=False,device= 'cpu')
 
-    def update(self, frame, body_coords, minConf = 0.75):
-        ptvsd.debug_this_thread()
-        if len(body_coords) > 0 or body_coords is None:
-            x_b, y_b, w_b, h_b = body_coords
-            x_b, y_b, w_b, h_b = [0 if i < 0 else i for i in [x_b, y_b, w_b, h_b]]
-        else:
-            return []
-
+    def update(self, frame, body_coords = [], minConf = 0.9):
+        """ 
+        Checks if there are body coords.
+        If None, then it assumes that you want to scan the entire frame
+        If there are body_coords then it cuts out the frame with only the body detections
+        """
+        print('Running a MTCNN')
         W, H = frame.shape[:2]
+
+        width_minimum = 30
+        height_minimum = 40
         if self.resize != 1:
             frame = cv2.resize(frame, (int(frame.shape[1] * self.resize), int(frame.shape[0] * self.resize)))
         
-        frame = frame[y_b:y_b+h_b, x_b:x_b+w_b, :]
         boxes, results = self.mtcnn.detect(frame, landmarks=False)
-
-        #print('Face Detection Inference is: {}'.format(time.time()-start_time))
 
         if boxes is None:
             return []
         
         #Filter out the results if there are faces less than minConf
-        try:
-            boxes = [i for i in boxes if results.any() > minConf]
-        except ValueError:
-            boxes = [i for i in boxes if results > minConf]
+        #boxes = [i for (i,j) in zip(boxes,results) if j >= minConf]
 
-        if len(boxes) > 0:
+        elif len(boxes) > 0:
             #Resize facebounding box to original size
             boxes = np.multiply(boxes,(1/self.resize))
-            (x,y,x2,y2) =  boxes[0]
+            too_small = []
+            for f,b in enumerate(boxes):
+                x_a,y_a,x2_a,y2_a = b
+                w_a = x2_a - x_a
+                h_a = y2_a - y_a
+
+                if w_a < width_minimum or h_a < height_minimum:
+                    too_small.append(f)
+                else:
+                    pass
+
+            if len(too_small) > 0:
+                boxes = np.delete(boxes, too_small, axis = 0)
+
+            if len(boxes) > 0:        
+                (x,y,x2,y2) = boxes[np.argmax(results)]
+            else:
+                return []
         else:
             return []
 
         w = x2-x
         h = y2-y
         x,y,w,h = [int(x) if x > 0 else 0 for x in [x,y,w,h]]
-
-        #Translate into framfe coordinates, right now they are in reference to the body frame only
-        x = x_b + x
-        y = y_b + y
-        
         boxes = [x,y,w,h]
         return boxes
 
-
-class Hog_Detector(object):
-    def __init__(self):
-        self.hog = cv2.HOGDescriptor()
-        self.hog.setSVMDetector(cv2.HOGDescriptor_getDefaultPeopleDetector())
-
-    def update(self, frame, frameCenter, minConf = 0.4, threshold = 0.5):
-        frame = imutils.resize(frame, width=min(400, frame.shape[1]))
-        orig = frame.copy()
-
-        rects, weights = self.hog.detectMultiScale(frame, winStride =(8,8), padding=(8,8), scale = 1.05)
-        rects = np.array([[x, y, x + w, y + h] for (x, y, w, h) in rects])
-        boxes = non_max_suppression(rects, probs=None, overlapThresh=threshold)
-
-        if len(boxes) > 0 and len(weights) > 0:
-            boxes = boxes.tolist()
-            weights = weights.tolist()
-        else: 
-            boxes = []
-            weights = []
-        return boxes, weights
-
+    
+    def get_all_locations(self, frame, minConf = 0.6):
+        if self.resize != 1:
+            frame = cv2.resize(frame, (int(frame.shape[1] * self.resize), int(frame.shape[0] * self.resize)))
+        boxes, results = self.mtcnn.detect(frame, landmarks=False)
+        print('Running a MTCNN 2')
+        #print('Face Detection Inference is: {}'.format(time.time()-start_time))
+        if boxes is None:
+            return []
+        elif len(boxes) > 0:
+            # Resize facebounding box to original size
+            boxes = np.multiply(boxes,(1/self.resize))
+            return boxes
 
 #Yolov3 tiny prn 
 #Open CV DNN Module implementation
@@ -88,9 +89,9 @@ class Yolov3(object):
 
     def __init__(self):
         np.random.seed(42)
-        weightsPath = "C:/Projects/NDI_FaceTrack/models/yolov3-tiny-prn.weights"
-        configPath = "C:/Projects/NDI_FaceTrack/models/yolov3-tiny-prn.cfg"
-        labelsPath = "C:/Projects/NDI_FaceTrack/models/coco.names"
+        weightsPath = "models/yolov3-tiny-prn.weights"
+        configPath = "models/yolov3-tiny-prn.cfg"
+        labelsPath = "models/coco.names"
         self.LABELS = open(labelsPath).read().strip().split("\n")
         self.net = cv2.dnn.readNetFromDarknet(configPath, weightsPath)
         # self.net.setPreferableBackend(cv2.dnn.DNN_BACKEND_CUDA)
@@ -148,108 +149,120 @@ class Yolov3(object):
         idxs = cv2.dnn.NMSBoxes(self.boxes, self.confidences, minConf, threshold)
         return idxs, self.boxes, self.COLORS, self.LABELS, self.classIDs, self.confidences
 
-#NOT WORKING
-class Yolov3_2(object):
-    #PyTorch implementation for GPU use
+class Face_Locker(object):
     def __init__(self):
-
-        self.use_cuda = True
-        np.random.seed(42)
-        weightsPath = "C:/Projects/NDI_FaceTrack/models/yolov3-tiny.weights"
-        configPath = "C:/Projects/NDI_FaceTrack/models/yolov3-tiny.cfg"
-        labelsPath = "C:/Projects/NDI_FaceTrack/models/coco.names"
-        self.LABELS = open(labelsPath).read().strip().split("\n")
-        self.m = Darknet(configPath)
-
-        self.class_names = load_class_names(labelsPath)
-        self.m = Darknet(configPath, img_size=(416, 416))
-        self.m.eval()
-        load_darknet_weights(self.m, weightsPath)
-
-        if self.use_cuda:
-            self.m.cuda()
-
-    def update(self, frames, frameCenter, minConf = 0.4, threshold = 0.3):
-        idxs = []
-        self.boxes = []
-        self.confidences = []
-        self.classIDs = []
-
-        (H, W) = frames.shape[:2]
-        sized = cv2.resize(frames, (416, 416))
-        start = time.time()
-    
-        #with torch.no_grad():
-        boxes = do_detect(self.m, sized, 0.3, 80, 0.4, self.use_cuda)
-
-        print("Detection time takes {}".format(time.time()-start))
-        result_img = plot_boxes_cv2(frames, boxes, savename=None, class_names= self.class_names)
-        cv2.imshow('Yolo demo', result_img)
-        cv2.waitKey(1)
-
-#NOT WORKING
-class Yolov4(object):
-    #PyTorch implentations
-    def __init__(self):
-        self.use_cuda = True
-     
-        np.random.seed(42)
-        weightsPath = "C:/Projects/NDI_FaceTrack/models/yolov3-tiny-prn.weights"
-        configPath = "C:/Projects/NDI_FaceTrack/models/yolov3-tiny-prn.cfg"
-        # weightsPath = "C:/Projects/NDI_FaceTrack/models/yolov4.weights"
-        # configPath = "C:/Projects/NDI_FaceTrack/models/yolov4.cfg"
-        labelsPath = "C:/Projects/NDI_FaceTrack/models/coco.names"
-    
-        self.class_names = load_class_names(labelsPath)
-        self.m = Darknet(configPath)
-        self.m.eval()
-        #self.m.print_network()
-        self.m.load_weights(weightsPath)
-
-        if self.use_cuda:
-            self.m.cuda()
-                
-        # self.LABELS = open(labelsPath).read().strip().split("\n")
-        # self.COLORS = np.random.randint(0, 255, size=(len(self.LABELS), 3),
-        # dtype="uint8")
-        self.resize = 1
-
-
-    def update(self, frames, frameCenter, minConf = 0.4, threshold = 0.3):
-        idxs = []
-        self.boxes = []
-        self.confidences = []
-        self.classIDs = []
-
-        (H, W) = frames.shape[:2]
-        if self.resize != 1:
-            frames = cv2.resize(frames, (int(frames.shape[1] * self.resize), int(frames.shape[0] * self.resize)))
+        #Load encodings
+        toc = time.time()
+        known_face_encodings = np.load('models/faces/faces_d.npy')
+        self.known_face_encodings = [x for x in known_face_encodings]
+        self.original_list_length = len(self.known_face_encodings)
         
-        sized = cv2.resize(frames, (self.m.width, self.m.height))
-        start = time.time()
+        self.face_locked_on = False
+
+        text_file = open('models/faces/faces_d.txt', 'r')
+        self.known_face_names = text_file.read().splitlines()
+        print('Loading Face Locker takes: {}s'.format(time.time()-toc))
     
-        with torch.no_grad():
-            boxes = do_detect(self.m, sized, 0.3, 80, 0.4, self.use_cuda)
+    def face_encode(self, frame, face_coords = None):
+        #ptvsd.debug_this_thread()
+        scale_factor = 0.25
+        """
+        Expects a frame in the face with, with face_coords for ONE face in the format x1,y1,w,h
+        Face encodings take the format [[y1, x2, y2, x1]] (List of Tuples)
 
-        print("Detection time takes {}".format(time.time()-start))
-        result_img = plot_boxes_cv2(frames, boxes, savename=None, class_names= self.class_names)
-        cv2.imshow('Yolo demo', result_img)
-        cv2.waitKey(1)
+        If face_coords is not given, entire frame is searched. 
+            Expect face_encoding to be a list with length greater than 1
+        Else if the face_coords is empty return False since there are no faces to encode
+        Else if there are face coords given, return the face embeddings of that face.
+        """
+        toc = time.time()
+        small_frame = cv2.resize(frame, (0,0), fx=scale_factor, fy=scale_factor)
+        rgb_small_frame = small_frame[:,:,::-1]
+        width, height = rgb_small_frame.shape[:2]
+        
+        if face_coords is None:
+            face_encoding = face_recognition.face_encodings(rgb_small_frame)
+            print('Scanning entire frame for face')
 
-        #tracker, detection_class = self.deepsort.run_deep_sort(frames, self.confidences, self.boxes)
+        elif len(face_coords) <= 0:
+            print('No face to encode')
+            return False
 
-        # for track in tracker.tracks:
-        #     if not track.is_confirmed() or track.time_since_update > 1:
-        #         continue
+        elif not face_coords is None:
+            try: 
+                x1,y1,w,h = face_coords
+            except ValueError:
+                x1,y1,w,h = face_coords[0]
 
-        #     bbox = track.to_tlbr()
-        #     id_num = str(track.track_id)
-        #     features = track.features
+            x1,y1,w,h = [int(b * scale_factor) for b in [x1,y1,w,h]]
 
-        #     cv2.rectangle(frames, (int(bbox[0]), int(bbox[1])), (int(bbox[2]), int(bbox[3])),(255,255,255), 1)
-        #     cv2.putText(frames, str(id_num),(int(bbox[0]), int(bbox[1])),0, 5e-3 * 200, (0,255,0),1)
-        # [[x1,y1,x2,y2,score],[x1,y1,x2,y2,score],...]
+            x2 = x1+w
+            y2 = y1+h
+            face_coords = [y1,x2,y2,x1]
+            face_encoding = face_recognition.face_encodings(rgb_small_frame, [face_coords])
+            print("frame to encode has dimenions {}W and {}H ".format(width, height))
+        print('Face Locker Encoding took: {}s'.format(time.time()-toc))
+        return face_encoding
+    
+    def register_new_face(self, frame, face_coords, name = None):
+        scale_factor = 0.25
+        """
+        Expects a frame in the face with, with face_coords for ONE face in the format x1,y1,w,h
+        Face encodings take the format [[y1, x2, y2, x1]] (List of Tuples)
 
+        If face_coords is not given, entire frame is searched. 
+            Expect face_encoding to be a list with length greater than 1
+        Else if the face_coords is empty return False since there are no faces to encode
+        Else if there are face coords given, return the face embeddings of that face.
+        """
+        toc = time.time()
+        small_frame = cv2.resize(frame, (0,0), fx=scale_factor, fy=scale_factor)
+        rgb_small_frame = small_frame[:,:,::-1]
+        face_coords= [x*scale_factor for x in face_coords]
+        face_encoding = self.face_encode(frame, face_coords)
 
-        # tracked_objects = self.mot_tracker.update(detections.cpu())
+        if face_encoding is False:
+            return False
+        elif len(face_encoding) >= 0:
+            self.known_face_encodings.append(face_encoding[0])
+            if name is None:
+                name = 'Target'
+            self.known_face_names.append(name)
+            return True
+        else:
+            return False
 
+    def does_it_match(self, face_encoding):
+        #ptvsd.debug_this_thread()
+        """
+        Input face_encoding is a SINGLE face_encoding
+        Return False if no matches are found.
+        Otherwise, return the index of the closest match to the the known_face_encodings
+        """
+        if face_encoding is not False:
+            matches = face_recognition.compare_faces(self.known_face_encodings,face_encoding[0])
+        else:
+            return False
+
+        if any(matches) == True:
+            face_distances = []
+            for i in self.known_face_encodings:
+                face_distance = face_recognition.face_distance(i, face_encoding)
+                face_distances.append(face_distance)
+
+            best_match_index = np.argmin(face_distances)
+            return best_match_index
+
+        else:
+            print('No faces match')
+            return False
+
+    def has_lock(self):
+        if len(self.known_face_encodings) > len(self.original_list_length):
+            self.face_locked_on = True
+        else:
+            self.face_locked_on = False
+
+    def get_face_locations(self,frame):
+        face_locations = face_recognition.face_locations(frame)
+        return face_locations

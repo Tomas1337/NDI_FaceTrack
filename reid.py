@@ -32,7 +32,7 @@ class Config(object):
         parser.add_argument('--resize_h_w', type=eval, default=(256, 128))
         parser.add_argument('--last_conv_stride', type=int, default=1, choices=[1, 2])
         parser.add_argument('--ckpt_file', type=str, default='')
-        parser.add_argument('--model_weight_file', type=str, default='C:\\Projects\\NDI_FaceTrack\\models\\res50_reid.pth')
+        parser.add_argument('--model_weight_file', type=str, default='models\\res50_reid.pth')
 
         args = parser.parse_args()
 
@@ -131,76 +131,3 @@ class Run_Reid(object):
             feat = self.model(im)
             feat_T = torch.cat((feat_T, feat), 0)
         return feat_T
-
- 
-#Testing method
-def test_reid():
-    
-    #########
-    # Model #
-    #########
-
-    cfg = Config()
-    TVT, TMO = set_devices(cfg.sys_device_ids)
-
-    model = Model(last_conv_stride=cfg.last_conv_stride)
-    # Set eval mode. Force all BN layers to use global mean and variance, also disable dropout.
-    model.eval()
-    # Transfer Model to Specified Device.
-    TMO([model])
-
-    #####################
-    # Load Model Weight #
-    #####################
-
-    used_file = cfg.model_weight_file or cfg.ckpt_file
-    loaded = torch.load(used_file, map_location=(lambda storage, loc: storage))
-    if cfg.model_weight_file == '':
-        loaded = loaded['state_dicts'][0]
-    load_state_dict(model, loaded)
-    print('Loaded model weights from {}'.format(used_file))
-
-    ###################
-    # Extract Feature #
-    ###################
-
-    im_dir = osp.expanduser('C:/Projects/Tutorials/Reid/test')
-    im_paths = get_im_names(im_dir, pattern='*.jpg', return_path=True, return_np=False)
-
-    all_feat = []
-
-    for i, im_path in enumerate(im_paths):
-        tic = time.time()
-        im = np.asarray(Image.open(im_path).convert('RGB'))
-        im = pre_process_im(im, cfg)
-        im = Variable(TVT(torch.from_numpy(im).float()), volatile = False)
-        feat = model(im)
-        feat = feat.data.cpu().numpy()
-        all_feat.append(feat)
-        #print(time.time() - tic)
-
-    base_feature = all_feat[0]
-    base_distance = 0
-    match_count = 0
-    not_match_count = 0
-
-    for i, feature in enumerate(all_feat):
-        distance = cosine_distance(base_feature, feature)
-
-        #distance = euclidean_distance(base_feature, feature)
-
-        
-        if distance - base_distance < 0.10:
-            state = 'MATCH'
-            match_count += 1
-        else:
-            state = 'NOT A MATCH'
-            not_match_count += 1
-
-        print(distance, state)
-    print('Matches: {} & Not Matches: {}'.format(match_count, not_match_count))
-        
-
-    #print(all_feat)
-
-#test_reid()
