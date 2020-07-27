@@ -138,6 +138,9 @@ class WindowGUI(QWidget):
         self.video_frame.setStyleSheet("background-color:#000000;")
         self.video_frame.setAlignment(Qt.AlignCenter)
 
+        #Home Position Draggable
+        #self.home_pos = DraggableLabel("drop here", self)
+
         #Info Panel
         self.info_panel = QLabel('No Signal',self)
         self.info_panel.setFont(QFont("Arial", 24, QFont.Bold))
@@ -160,14 +163,11 @@ class WindowGUI(QWidget):
 
         self.reset_track_button = QResetButton(self)
         self.reset_track_button.setDisabled(True)
-        #self.reset_track_button.setFixedHeight(40)
         self.reset_track_button.setMinimumWidth(300)
 
         #Face Lock Button
         self.face_lock_button = QPushButton('LOCK TO FACE')
         self.face_lock_button.setCheckable(True)
-        #self.face_lock_button.setFixedHeight(40)
-        #self.face_lock_button.setDisabled(True)
 
         #Y-Axis Tracking
         self.y_enable_button = QToggleButton('Y-Axis Tracking')
@@ -239,6 +239,7 @@ class WindowGUI(QWidget):
         
         vid_layout.addWidget(self.info_panel)
         vid_layout.addWidget(self.video_frame)
+        #vid_layout.addWidget(self.home_pos)
         vid_layout.setSpacing(0)
 
         layout.addLayout(controls_layout)
@@ -346,23 +347,25 @@ class WorkerObject(QObject):
 
     def __init__(self, parent=None):
         super(self.__class__, self).__init__(parent)
+        self.ndi_cam = None
     
     @pyqtSlot()
     def findSources(self):
         self.ndi_cam = ndi_camera()
         self.signalStatus.emit('Searching for PTZ cameras')
         (ptz_list, sources) = self.ndi_cam.find_ptz()
+        print("PTZ List: {}".format(ptz_list))
         self.ptz_names = [sources[i].ndi_name for i in ptz_list]
         self.signalStatus.emit('Idle')
         self.ptz_list_signal.emit(self.ptz_names)
 
     @pyqtSlot(int)
-    def connect_to_camera(self, int):
+    def connect_to_camera(self, cam_num):
         self.signalStatus.emit('Connecting to camera') 
-        ndi_recv = self.ndi_cam.camera_connect(int-1)
-        self.signalStatus.emit('Connected to {}'.format(self.ptz_names[int-1]))
+        ndi_recv = self.ndi_cam.camera_connect(cam_num)
+        self.signalStatus.emit('Connected to {}'.format(self.ptz_names[cam_num]))
         self.ptz_object_signal.emit(ndi_recv)
-        self.info_status.emit('Signal: {}'.format(self.ptz_names[int-1]))
+        self.info_status.emit('Signal: {}'.format(self.ptz_names[cam_num]))
         self.enable_controls_signal.emit()
 
 #Handles the reading and displayingg of video
@@ -389,8 +392,8 @@ class Video_Object(QObject):
                 self.frame_count += 1   
                 frame = v.data
                 frame = frame[:,:,:3]
-                resize_factor = 1
-                frame = cv2.resize(frame, (int(frame.shape[1] * resize_factor), int(frame.shape[0] * resize_factor)))
+                resize_frame_shape = (640,480)
+                frame = cv2.resize(frame, resize_frame_shape)
                 #Code to process the GUI events before proceeding
                 QApplication.processEvents()
 
@@ -437,12 +440,7 @@ class Video_Object(QObject):
                 if self.face_track_state == False:
                     self.display_plain_video(frame)
                 elif self.face_track_state == True:
-                    if self.frame_count%self.skip_frames == 0:
-                        tic1 = time.time()
-                        self.FaceFrameSignal.emit(frame) 
-                    else:
-                        continue
-                    #print(tic1 - time.time())
+                    self.FaceFrameSignal.emit(frame) 
                 ndi.recv_free_video_v2(self.ndi_recv, v)
 
     @pyqtSlot(bool)
