@@ -1,10 +1,10 @@
 from PyQt5.QtCore import QTextStream, QFile, QDateTime, QSize, Qt, QTimer,QRect, QThread, QObject, pyqtSignal,pyqtSlot, QRunnable
-from PyQt5.QtWidgets import (QApplication, QCheckBox, QComboBox, QDateTimeEdit,
-        QDial, QDialog, QGridLayout, QGroupBox, QHBoxLayout, QLabel, QBoxLayout,
-        QProgressBar, QPushButton, QButtonGroup,
-        QSlider, QStyleFactory, QTableWidget, QTabWidget, QTextEdit,
+from PyQt5.QtWidgets import (QApplication, QCheckBox, QComboBox,
+        QGridLayout, QGroupBox, QHBoxLayout, QLabel, QBoxLayout,
+        QPushButton, QButtonGroup, QGraphicsView,
+        QSlider, QStyleFactory,
         QVBoxLayout, QWidget, QAbstractButton, QMainWindow, QAction, QMenu,
-        QStyleOptionSlider, QStyle, QSpacerItem, QSizePolicy)
+        QStyle, QSpacerItem, QSizePolicy)
 from PyQt5.QtGui import QImage, QPixmap, QPainter, QBrush, QFont, QPen, QPalette, QColor, QIcon
 from face_tracking.objcenter import *
 from ndi_camera import ndi_camera
@@ -36,7 +36,7 @@ class MainWindow(QMainWindow):
         title = "NDI FaceTrack"
         self.setWindowTitle(title) 
         self.gui.show()
-        self.setFixedSize(700, 750)
+        self.setFixedSize(700, 700)
 
     def _connectSignals(self):
         self.signalStatus.connect(self.gui.updateStatus)
@@ -114,12 +114,8 @@ class MainWindow(QMainWindow):
     @pyqtSlot(np.ndarray)
     def face_track_signal_handler(self, frame):
         #Must emit a a list containing (np.ndarray, string)
-        if self.gui.center_track_button.isChecked():
-            self.face_track_signal.emit([frame, 'center'])
-        elif self.gui.left_track_button.isChecked():
-            self.face_track_signal.emit([frame, 'left'])
-        elif self.gui.right_track_button.isChecked():
-            self.face_track_signal.emit([frame, 'right'])
+        center_coords = self.gui.home_pos.getPosition()
+        self.face_track_signal.emit([frame, center_coords])
 
 class WindowGUI(QWidget):
     def __init__(self, parent):
@@ -134,12 +130,14 @@ class WindowGUI(QWidget):
         #Video Widgets
         self.video_frame = QLabel('',self)
         self.video_frame.setFixedHeight(400)
+        #self.video_frame.setFixedWidth(700) #### Get width of parent object or just pass on the parent width to the child
         self.video_frame.setAutoFillBackground(True)
         self.video_frame.setStyleSheet("background-color:#000000;")
         self.video_frame.setAlignment(Qt.AlignCenter)
 
         #Home Position Draggable
-        #self.home_pos = DraggableLabel("drop here", self)
+        self.home_pos = GraphicView(self.video_frame)
+        #self.home_pos.setAlignment(Qt.AlignRight | Qt.AlignTop)
 
         #Info Panel
         self.info_panel = QLabel('No Signal',self)
@@ -192,7 +190,7 @@ class WindowGUI(QWidget):
 
         #Gamma Sliders
         gamma_label = QLabel()
-        gamma_label.setText('Gamma')
+        gamma_label.setText('Speed Sensitivity:')
         self.gamma_slider = QSlider()
         self.gamma_slider.setOrientation(Qt.Horizontal)
         self.gamma_slider.setValue(6)
@@ -202,23 +200,25 @@ class WindowGUI(QWidget):
 
         #Minimum Error Slider
         x_minE_label = QLabel()
-        x_minE_label.setText('Minimum X-Error:')
+        x_minE_label.setText('Horizontal Error Trigger:')
         self.x_minE_slider = QSlider()
         self.x_minE_slider.setOrientation(Qt.Horizontal)
         self.x_minE_slider.setMinimum(1)
-        self.x_minE_slider.setMaximum(10)
-        self.x_minE_slider.setValue(5)
+        self.x_minE_slider.setMaximum(6)
+        self.x_minE_slider.setValue(1)
         y_minE_label = QLabel()
-        y_minE_label.setText('Minimum Y-Error:')
+        y_minE_label.setText('Vertical Error Trigger:')
         self.y_minE_slider = QSlider()
         self.y_minE_slider.setMinimum(1)
-        self.y_minE_slider.setMaximum(10)
+        self.y_minE_slider.setMaximum(6)
         self.y_minE_slider.setOrientation(Qt.Horizontal)
-        self.y_minE_slider.setValue(5)
+        self.y_minE_slider.setValue(1)
 
         #Zoom Slider
         zoom_slider_label = QLabel()
-        zoom_slider_label.setText('Zoom')
+        zoom_slider_label.setText('ZOOM:')
+        zoom_slider_label.setFont(QFont("Arial", 16))
+    
         self.zoom_slider = QSlider()
         self.zoom_slider.setOrientation(Qt.Horizontal)
         self.zoom_slider.setValue(0)
@@ -236,18 +236,18 @@ class WindowGUI(QWidget):
         controls_layout = QGridLayout(self)
         controls_layout.setSpacing(10)
         layout.addLayout(vid_layout)
-        
+        layout.setAlignment(Qt.AlignCenter)
+
         vid_layout.addWidget(self.info_panel)
         vid_layout.addWidget(self.video_frame)
-        #vid_layout.addWidget(self.home_pos)
         vid_layout.setSpacing(0)
 
         layout.addLayout(controls_layout)
         controls_layout.addWidget(self.face_track_button, 0,0,1,-1)
         layoutFacePosTrack = QHBoxLayout(self)
-        layoutFacePosTrack.addWidget(self.left_track_button)
-        layoutFacePosTrack.addWidget(self.center_track_button)
-        layoutFacePosTrack.addWidget(self.right_track_button)
+        #layoutFacePosTrack.addWidget(self.left_track_button)
+        #layoutFacePosTrack.addWidget(self.center_track_button)
+        #layoutFacePosTrack.addWidget(self.right_track_button)
         layoutFacePosTrack.setSpacing(5)
         controls_layout.setAlignment(Qt.AlignCenter)
         controls_layout.addLayout(layoutFacePosTrack,1,0,1,-1)
@@ -301,7 +301,7 @@ class WindowGUI(QWidget):
         
     @pyqtSlot(QImage)
     def setImage(self, image):
-        img = image.scaled(640, 480, Qt.KeepAspectRatio)
+        img = image.scaled(640, 360, Qt.KeepAspectRatio)
         self.video_frame.setPixmap(QPixmap.fromImage(img))
 
     #Activates/Deactivates all the tracking buttons based if FaceTrack button is on/off
@@ -328,8 +328,8 @@ class WindowGUI(QWidget):
 
     def reset_defaults_handler(self, state):
         self.gamma_slider.setValue(6)
-        self.x_minE_slider.setValue(0.5)
-        self.y_minE_slider.setValue(0.5)
+        self.x_minE_slider.setValue(1)
+        self.y_minE_slider.setValue(1)
 
     def enable_controls(self):
         self.face_track_button.setEnabled(True)
@@ -392,7 +392,7 @@ class Video_Object(QObject):
                 self.frame_count += 1   
                 frame = v.data
                 frame = frame[:,:,:3]
-                resize_frame_shape = (640,480)
+                resize_frame_shape = (640,360)
                 frame = cv2.resize(frame, resize_frame_shape)
                 #Code to process the GUI events before proceeding
                 QApplication.processEvents()
@@ -663,25 +663,20 @@ class FaceDetectionWidget(QObject):
         self.track_coords = []
         start = time.time()
         frame = _list[0]
+
         try:
-            center_slot = _list[1]
+            center_coords = _list[1]
         except IndexError:
-            center_slot = 'center'
+            (H, W) = frame.shape[:2]
+            center_coords = (W//2, H//2)
 
         (H, W) = frame.shape[:2]
-        centerX= W // 2
-        centerY = H // 2
+        centerX = int(center_coords[0])
+        centerY = int(center_coords[1])
         objX = centerX
         objY = centerY
 
-        #Adjust Center X, here  
-        if center_slot == 'left':
-            centerX = W//4
-        elif center_slot == 'right':
-            centerX = int(W//1.33)
-        elif center_slot == 'center':
-            pass
-        cv2.circle(frame,(centerX, centerY), 3, (255,255,255), 2)
+        #cv2.circle(frame,(centerX, centerY), 3, (255,255,255), 2)
         
         #Trackers
         face_coords = self.face_tracker(frame)
@@ -802,13 +797,31 @@ class FaceDetectionWidget(QObject):
 
         y_controller = PTZ_Controller_Novel(self.focal_length, self.gamma)
         y_speed = y_controller.omega_tur_plus1(objY, centerY, RMin = 0.1, RMax=7.5)
-        #y_speed = 0
+        
+        x_speed = self._pos_error_thresholding(W, x_speed, centerX, objX, self.xminE)
+        y_speed = self._pos_error_thresholding(H, y_speed, centerY, objY, self.yminE)
+
         if self.y_trackState is False:
             y_speed = 0
 
         self.CameraControlSignal.emit(x_speed, y_speed)
-        #self.writer.update(Xerror, Yerror,Xspeed,Yspeed, objX, objY, self.frame_count)
         self.frame_count += 1
+        print("X Speed: {} Y Speed: {}".format(x_speed, y_speed))
+
+    def _pos_error_thresholding(self,frame_dim, calc_speed, center_coord, obj_coord, error_threshold):
+        """
+        Function to check if the distance between the desired position and the current position is above a threshold.
+        If below threshold, return 0 as the speed
+        If above threshold, do nothing
+        """
+        error = np.abs(center_coord - obj_coord)/(frame_dim/2)
+    
+        if error >= error_threshold:
+            pass
+        else:
+            calc_speed = 0
+        
+        return calc_speed
 
     def get_qimage(self, image):
         height, width, _ = image.shape

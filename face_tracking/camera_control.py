@@ -37,7 +37,7 @@ class PTZ_Controller_Novel():
             x = time_now - time_prev
         return x
 
-    def omega_tur_plus1(self, obj_coord, center_coord, RMin = 0.0, RMax =10, TMin = 0, TMax =1):
+    def omega_tur_plus1(self, obj_coord, center_coord, RMin = 0.0, RMax =10, TMin = 0.1, TMax =1):
         if self.time_prev == None:
             self.time_prev = time.time()
         else:
