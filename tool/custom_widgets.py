@@ -1,7 +1,7 @@
 __author__ = "Tomas Lastrilla"
 __version__ = "0.1.1"
 
-from PyQt5.QtCore import QSize, Qt, QMimeData, QPointF
+from PyQt5.QtCore import QSize, Qt, QMimeData, QPointF, pyqtSignal
 from PyQt5.QtWidgets import QGraphicsTextItem, QGridLayout, QPushButton, QSizePolicy, QLabel, QVBoxLayout, QWidget, QApplication, QGraphicsView, QGraphicsScene, QGraphicsEllipseItem
 from PyQt5.QtGui import QPainter, QColor, QFont, QIcon, QDrag, QPixmap
 import sys
@@ -59,6 +59,7 @@ class QTrackingButton(QPushButton):
 
 
 class MovingObject(QGraphicsTextItem):
+    mouseReleaseSignal = pyqtSignal(int, int)
     def __init__(self, x ,y, scene_width, scene_height):
         super().__init__()
         self.setAcceptHoverEvents(True)
@@ -109,6 +110,7 @@ class MovingObject(QGraphicsTextItem):
         self.center_x = self.pos().x() + int(self.bounding_width/2)
         self.center_y = self.pos().y() + int(self.bounding_height/2)
         print('x: {0}, y: {1}'.format(self.center_x, self.center_y))
+        self.mouseReleaseSignal.emit(self.center_x, self.center_y)
 
     def _getPosition(self):
         self.center_x = self.pos().x() + int(self.bounding_width/2)
@@ -116,6 +118,7 @@ class MovingObject(QGraphicsTextItem):
         return (self.center_x, self.center_y)
 
 class GraphicView(QGraphicsView):
+    mouseReleaseSignal = pyqtSignal(int, int)
     def __init__(self, parent):
         super(GraphicView, self).__init__(parent)
  
@@ -134,11 +137,15 @@ class GraphicView(QGraphicsView):
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.moveObject = MovingObject(center[0], center[1], width, height)
+        self.mouseReleaseSignal.connect(self.moveObject.mouseReleaseEvent)
 
         self.scene.addItem(self.moveObject)
         self.move(21,21) #Manual move since it wont center properly
 
     def getPosition(self):
-
         (center_x, center_y) = self.moveObject._getPosition()
         return (center_x, center_y)
+    
+    def mouseReleaseEvent(self, e):
+        (center_x, center_y) = self.moveObject._getPosition()
+        self.mouseReleaseSignal.emit(center_x, center_y)

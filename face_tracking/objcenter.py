@@ -4,9 +4,7 @@ import time
 import numpy as np
 from facenet_pytorch import MTCNN
 from imutils.object_detection import non_max_suppression
-#import face_recognition
 import os
-#import ptvsd
 import time
 
 class FastMTCNN(object):
@@ -105,7 +103,7 @@ class Yolov3(object):
         self.detections = []
 
 
-    def update(self, frames, frameCenter, minConf = 0.4, threshold = 0.5):
+    def update(self, frames, minConf = 0.4, threshold = 0.5):
         idxs = []
         self.boxes = []
         self.confidences = []
@@ -149,120 +147,120 @@ class Yolov3(object):
         idxs = cv2.dnn.NMSBoxes(self.boxes, self.confidences, minConf, threshold)
         return idxs, self.boxes, self.COLORS, self.LABELS, self.classIDs, self.confidences
 
-class Face_Locker(object):
-    def __init__(self):
-        #Load encodings
-        toc = time.time()
-        known_face_encodings = np.load('models/faces/faces_d.npy')
-        self.known_face_encodings = [x for x in known_face_encodings]
-        self.original_list_length = len(self.known_face_encodings)
+# class Face_Locker(object):
+#     def __init__(self):
+#         #Load encodings
+#         toc = time.time()
+#         known_face_encodings = np.load('models/faces/faces_d.npy')
+#         self.known_face_encodings = [x for x in known_face_encodings]
+#         self.original_list_length = len(self.known_face_encodings)
         
-        self.face_locked_on = False
+#         self.face_locked_on = False
 
-        text_file = open('models/faces/faces_d.txt', 'r')
-        self.known_face_names = text_file.read().splitlines()
-        print('Loading Face Locker takes: {}s'.format(time.time()-toc))
+#         text_file = open('models/faces/faces_d.txt', 'r')
+#         self.known_face_names = text_file.read().splitlines()
+#         print('Loading Face Locker takes: {}s'.format(time.time()-toc))
     
-    def face_encode(self, frame, face_coords = None):
-        #ptvsd.debug_this_thread()
-        scale_factor = 0.25
-        """
-        Expects a frame in the face with, with face_coords for ONE face in the format x1,y1,w,h
-        Face encodings take the format [[y1, x2, y2, x1]] (List of Tuples)
+#     def face_encode(self, frame, face_coords = None):
+#         #ptvsd.debug_this_thread()
+#         scale_factor = 0.25
+#         """
+#         Expects a frame in the face with, with face_coords for ONE face in the format x1,y1,w,h
+#         Face encodings take the format [[y1, x2, y2, x1]] (List of Tuples)
 
-        If face_coords is not given, entire frame is searched. 
-            Expect face_encoding to be a list with length greater than 1
-        Else if the face_coords is empty return False since there are no faces to encode
-        Else if there are face coords given, return the face embeddings of that face.
-        """
-        toc = time.time()
-        small_frame = cv2.resize(frame, (0,0), fx=scale_factor, fy=scale_factor)
-        rgb_small_frame = small_frame[:,:,::-1]
-        width, height = rgb_small_frame.shape[:2]
+#         If face_coords is not given, entire frame is searched. 
+#             Expect face_encoding to be a list with length greater than 1
+#         Else if the face_coords is empty return False since there are no faces to encode
+#         Else if there are face coords given, return the face embeddings of that face.
+#         """
+#         toc = time.time()
+#         small_frame = cv2.resize(frame, (0,0), fx=scale_factor, fy=scale_factor)
+#         rgb_small_frame = small_frame[:,:,::-1]
+#         width, height = rgb_small_frame.shape[:2]
         
-        if face_coords is None:
-            face_encoding = face_recognition.face_encodings(rgb_small_frame)
-            print('Scanning entire frame for face')
+#         if face_coords is None:
+#             face_encoding = face_recognition.face_encodings(rgb_small_frame)
+#             print('Scanning entire frame for face')
 
-        elif len(face_coords) <= 0:
-            print('No face to encode')
-            return False
+#         elif len(face_coords) <= 0:
+#             print('No face to encode')
+#             return False
 
-        elif not face_coords is None:
-            try: 
-                x1,y1,w,h = face_coords
-            except ValueError:
-                x1,y1,w,h = face_coords[0]
+#         elif not face_coords is None:
+#             try: 
+#                 x1,y1,w,h = face_coords
+#             except ValueError:
+#                 x1,y1,w,h = face_coords[0]
 
-            x1,y1,w,h = [int(b * scale_factor) for b in [x1,y1,w,h]]
+#             x1,y1,w,h = [int(b * scale_factor) for b in [x1,y1,w,h]]
 
-            x2 = x1+w
-            y2 = y1+h
-            face_coords = [y1,x2,y2,x1]
-            face_encoding = face_recognition.face_encodings(rgb_small_frame, [face_coords])
-            print("frame to encode has dimenions {}W and {}H ".format(width, height))
-        print('Face Locker Encoding took: {}s'.format(time.time()-toc))
-        return face_encoding
+#             x2 = x1+w
+#             y2 = y1+h
+#             face_coords = [y1,x2,y2,x1]
+#             face_encoding = face_recognition.face_encodings(rgb_small_frame, [face_coords])
+#             print("frame to encode has dimenions {}W and {}H ".format(width, height))
+#         print('Face Locker Encoding took: {}s'.format(time.time()-toc))
+#         return face_encoding
     
-    def register_new_face(self, frame, face_coords, name = None):
-        scale_factor = 0.25
-        """
-        Expects a frame in the face with, with face_coords for ONE face in the format x1,y1,w,h
-        Face encodings take the format [[y1, x2, y2, x1]] (List of Tuples)
+#     def register_new_face(self, frame, face_coords, name = None):
+#         scale_factor = 0.25
+#         """
+#         Expects a frame in the face with, with face_coords for ONE face in the format x1,y1,w,h
+#         Face encodings take the format [[y1, x2, y2, x1]] (List of Tuples)
 
-        If face_coords is not given, entire frame is searched. 
-            Expect face_encoding to be a list with length greater than 1
-        Else if the face_coords is empty return False since there are no faces to encode
-        Else if there are face coords given, return the face embeddings of that face.
-        """
-        toc = time.time()
-        small_frame = cv2.resize(frame, (0,0), fx=scale_factor, fy=scale_factor)
-        rgb_small_frame = small_frame[:,:,::-1]
-        face_coords= [x*scale_factor for x in face_coords]
-        face_encoding = self.face_encode(frame, face_coords)
+#         If face_coords is not given, entire frame is searched. 
+#             Expect face_encoding to be a list with length greater than 1
+#         Else if the face_coords is empty return False since there are no faces to encode
+#         Else if there are face coords given, return the face embeddings of that face.
+#         """
+#         toc = time.time()
+#         small_frame = cv2.resize(frame, (0,0), fx=scale_factor, fy=scale_factor)
+#         rgb_small_frame = small_frame[:,:,::-1]
+#         face_coords= [x*scale_factor for x in face_coords]
+#         face_encoding = self.face_encode(frame, face_coords)
 
-        if face_encoding is False:
-            return False
-        elif len(face_encoding) >= 0:
-            self.known_face_encodings.append(face_encoding[0])
-            if name is None:
-                name = 'Target'
-            self.known_face_names.append(name)
-            return True
-        else:
-            return False
+#         if face_encoding is False:
+#             return False
+#         elif len(face_encoding) >= 0:
+#             self.known_face_encodings.append(face_encoding[0])
+#             if name is None:
+#                 name = 'Target'
+#             self.known_face_names.append(name)
+#             return True
+#         else:
+#             return False
 
-    def does_it_match(self, face_encoding):
-        #ptvsd.debug_this_thread()
-        """
-        Input face_encoding is a SINGLE face_encoding
-        Return False if no matches are found.
-        Otherwise, return the index of the closest match to the the known_face_encodings
-        """
-        if face_encoding is not False:
-            matches = face_recognition.compare_faces(self.known_face_encodings,face_encoding[0])
-        else:
-            return False
+#     def does_it_match(self, face_encoding):
+#         #ptvsd.debug_this_thread()
+#         """
+#         Input face_encoding is a SINGLE face_encoding
+#         Return False if no matches are found.
+#         Otherwise, return the index of the closest match to the the known_face_encodings
+#         """
+#         if face_encoding is not False:
+#             matches = face_recognition.compare_faces(self.known_face_encodings,face_encoding[0])
+#         else:
+#             return False
 
-        if any(matches) == True:
-            face_distances = []
-            for i in self.known_face_encodings:
-                face_distance = face_recognition.face_distance(i, face_encoding)
-                face_distances.append(face_distance)
+#         if any(matches) == True:
+#             face_distances = []
+#             for i in self.known_face_encodings:
+#                 face_distance = face_recognition.face_distance(i, face_encoding)
+#                 face_distances.append(face_distance)
 
-            best_match_index = np.argmin(face_distances)
-            return best_match_index
+#             best_match_index = np.argmin(face_distances)
+#             return best_match_index
 
-        else:
-            print('No faces match')
-            return False
+#         else:
+#             print('No faces match')
+#             return False
 
-    def has_lock(self):
-        if len(self.known_face_encodings) > len(self.original_list_length):
-            self.face_locked_on = True
-        else:
-            self.face_locked_on = False
+#     def has_lock(self):
+#         if len(self.known_face_encodings) > len(self.original_list_length):
+#             self.face_locked_on = True
+#         else:
+#             self.face_locked_on = False
 
-    def get_face_locations(self,frame):
-        face_locations = face_recognition.face_locations(frame)
-        return face_locations
+#     def get_face_locations(self,frame):
+#         face_locations = face_recognition.face_locations(frame)
+#         return face_locations

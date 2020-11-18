@@ -1,10 +1,8 @@
 
 
-
-Bugs:
-1. Secondary Lost trackign sequence constantly moves the camera to the side when 'left' or 'right' tracking.
-
-
+##07/30
+1. Using build method of 07/15
+	
 
 ##07/15
 1. Build using venv_0715

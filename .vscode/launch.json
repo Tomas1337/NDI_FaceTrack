@@ -1,18 +1,58 @@
+// {
+//     // Use IntelliSense to learn about possible attributes.
+//     // Hover to view descriptions of existing attributes.
+//     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+//     "version": "0.2.0",
+//     "configurations": [
+        
+//         {
+//             "name": "Python: FaceTrackInterface_10",
+//             "type": "python",
+//             "request": "launch",
+//             "program": "${file}",
+//             "console": "integratedTerminal",
+//             "pythonPath": "${command:python.interpreterPath}"
+            
+//         }
+//     ]
+// }
+
+
 {
     // Use IntelliSense to learn about possible attributes.
     // Hover to view descriptions of existing attributes.
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
-        
         {
-            "name": "Python: FaceTrackInterface_10",
+            "name": "Python: Flask",
             "type": "python",
             "request": "launch",
-            "program": "${file}",
-            "console": "integratedTerminal",
-            "pythonPath": "${command:python.interpreterPath}"
-            
+            "module": "flask",
+            "env": {
+                "FLASK_APP": "TrackingServer.py",
+                "FLASK_ENV": "development",
+                "FLASK_DEBUG": "1"
+            },
+            "args": [
+                "run",
+                "--no-debugger",
+                "--no-reload"
+            ],
+            "jinja": true
+        },
+        {
+            "name": "FaceTrackInterface",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/FaceTrackInterface.py",
+            "console": "externalTerminal"
+        }
+    ],
+    "compounds": [
+        {
+            "name": "Server/Client",
+            "configurations": ["Python: Flask", "FaceTrackInterface"]
         }
     ]
 }
