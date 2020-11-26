@@ -11,7 +11,7 @@
 //             "request": "launch",
 //             "program": "${file}",
 //             "console": "integratedTerminal",
-//             "pythonPath": "${command:python.interpreterPath}"
+//             "python": "${command:python.interpreterPath}"
             
 //         }
 //     ]

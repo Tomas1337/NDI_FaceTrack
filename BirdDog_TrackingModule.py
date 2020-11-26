@@ -25,7 +25,8 @@ class DetectionWidget():
 
         #Object Detectors
         self.face_obj = FastMTCNN() #TRY THIS FIRST
-        self.body_obj = Yolov3()
+        #self.body_obj = Yolov3()
+        self.body_obj = Yolov4()
 
         #Slider and button Values
         self.track_type = 0
@@ -71,18 +72,14 @@ class DetectionWidget():
             face_coords = self.face_tracker(frame)
             if len(face_coords) <= 0:
                 body_coords = self.body_tracker(frame)
-                print('tracking 0')
 
         elif self.track_type == 1:
             #Face Only
             face_coords = self.face_tracker(frame)
-            print('tracking face only')
-
         
         elif self.track_type == 2:
             #Body Only
             body_coords = self.body_tracker(frame)
-            print('tracking body only')
 
         try:
             x,y,w,h = face_coords
@@ -289,6 +286,12 @@ class DetectionWidget():
             #Start the body tracker for the given xywh
             self.b_tracker = cv2.TrackerKCF_create()
             try:
+                max_width = 100
+                if w > max_width:
+                    scale = max_width/w
+                    x,y,w,h = self._resizeRect(x,y,w,h,scale)
+                else:
+                    pass
                 self.b_tracker.init(frame, (x,y,w,h))
             except UnboundLocalError:
                 return []
@@ -298,7 +301,7 @@ class DetectionWidget():
         elif not self.b_tracker is None:
             tic = time.time()       
             self.btrack_ok, position = self.b_tracker.update(frame)
-            #print("Body Tracker update takes:{:.2f}s".format(time.time() - tic))
+            print("Body Tracker update takes:{:.2f}s".format(time.time() - tic))
             if self.btrack_ok:
                 x = int(position[0])
                 y = int(position[1])
@@ -328,11 +331,19 @@ class DetectionWidget():
         
         return calc_speed
 
+    def _resizeRect(self, x,y,w,h,scale):    
+        x = int(x + w * (1 - scale)/2)
+        y = int(y + h * (1 - scale)/2)
+        w = int(w * scale)
+        h = int(h * scale)
+        return (x,y,w,h)
+
     def overlap_metric(self, boxA, boxB):
         # determine the (x, y)-coordinates of the intersection rectangle
-        # BoxA and BoxB usually comes in x,y,w,h
-        # Tranlate into x,y,x1,y1
+        # BoxA and BoxB in x,y,w,h format
+        
         def _translate(box):
+            # Translate into x,y,x1,y1
             x,y,w,h = box
             x1 = x+w
             y1 = y+h

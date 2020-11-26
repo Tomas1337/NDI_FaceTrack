@@ -147,6 +147,71 @@ class Yolov3(object):
         idxs = cv2.dnn.NMSBoxes(self.boxes, self.confidences, minConf, threshold)
         return idxs, self.boxes, self.COLORS, self.LABELS, self.classIDs, self.confidences
 
+
+
+class Yolov4(object):
+    def __init__(self):
+        np.random.seed(42)
+        weightsPath = "models/yolov4-tiny.weights"
+        configPath = "models/yolov4-tiny.cfg"
+        labelsPath = "models/coco.names"
+        self.LABELS = open(labelsPath).read().strip().split("\n")
+        # self.net = cv2.dnn.readNetFromDarknet(configPath, weightsPath)
+        # self.net.setPreferableBackend(cv2.dnn.DNN_BACKEND_CUDA)
+        # self.net.setPreferableTarget(cv2.dnn.DNN_TARGET_CUDA)
+        self.net = cv2.dnn.readNet(configPath, weightsPath)
+        ln = self.net.getLayerNames()
+        self.ln = [ln[i[0] - 1] for i in self.net.getUnconnectedOutLayers()]
+        self.COLORS = np.random.randint(0, 255, size=(len(self.LABELS), 3),
+        dtype="uint8")
+        self.resize = 1
+        #self.mot_tracker = Sort()
+        self.detections = []
+
+
+    def update(self, frames, minConf = 0.4, threshold = 0.5):
+        idxs = []
+        self.boxes = []
+        self.confidences = []
+        self.classIDs = []
+
+        (H, W) = frames.shape[:2]
+        if self.resize != 1:
+            frames = cv2.resize(frames, (int(frames.shape[1] * self.resize), int(frames.shape[0] * self.resize)))
+        
+        blob = cv2.dnn.blobFromImage(frames, 1 / 255.0, (416, 416), swapRB=True, crop=False)
+        self.net.setInput(blob)
+        start = time.time()
+        layerOutputs = self.net.forward(self.ln)
+        #print("Detection yolov3 time takes  {}".format(time.time()-start))
+        # loop over each of the layer outputs
+
+        for output in layerOutputs:
+            # loop over each of the detections
+            for detection in output:
+                scores = detection[5:]
+                classID = np.argmax(scores)
+                #Filter out only person detections
+                if not classID == 0:
+                    continue 
+                confidence = scores[classID]
+                if confidence > minConf:
+                    #print('Confidence: {}'.format(confidence))
+                    box = detection[0:4] * np.array([W, H, W, H])
+                    (centerX, centerY, width, height) = box.astype("int")
+
+                    x = int(centerX - (width / 2))
+                    y = int(centerY - (height / 2))
+                    
+        
+                    self.classIDs.append(classID)
+                    self.boxes.append([x, y, int(width), int(height)])
+                    self.confidences.append(float(confidence))
+                    self.detections.append([x,y,x+width,y+height,confidence])
+
+
+        idxs = cv2.dnn.NMSBoxes(self.boxes, self.confidences, minConf, threshold)
+        return idxs, self.boxes, self.COLORS, self.LABELS, self.classIDs, self.confidences
 # class Face_Locker(object):
 #     def __init__(self):
 #         #Load encodings

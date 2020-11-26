@@ -45,7 +45,7 @@ class PipeClient:
     def readFromPipe(self):
         try:
             _, r =win32file.ReadFile(self.pipeHandle, 128)
-        except pywintype.error as e:
+        except pywintypes.error as e:
             print("Could not read from pipe from Client Side")
             r =b''
         finally:

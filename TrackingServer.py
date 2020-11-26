@@ -1,22 +1,27 @@
 from flask import Flask
 from flask import request
 from flask import jsonify
-import time, math, io, win32file, win32pipe, cv2
+from flask_script import Manager, Server
+import time, math, io, win32file, win32pipe, cv2, requests, configparser
+from tkinter import messagebox as mb
 import numpy as np
 import pywintypes, cv2, struct
+from licensing.models import *
+from licensing.methods import Key, Helpers, PaymentForm, AddCustomer
+
+
 from PIL import Image
+from config import CONFIG
 from threading import Thread
 from BirdDog_TrackingModule import DetectionWidget
 from BirdDog_TrackingModule import tracker_main
 
-
-
-app = Flask(__name__)
-
 BUFFERSIZE = 921654
 IMAGE_WIDTH = 640
 IMAGE_HEIGHT = 360
-#pipeHandle = None
+KEY = CONFIG.get('license','key')
+
+app = Flask(__name__)
 
 @app.route('/api/start_pipe_server', methods = ["GET", "POST"])
 def start_pipe_server():
@@ -24,6 +29,13 @@ def start_pipe_server():
     Initiates a Pipe Server
     We expect a Pipe Client from an extenral application to connect to the Pipe Server initiated by this method
     """
+
+    # #Checks your current license
+    # if check_license():
+    #     pass
+    # else:
+    #     return jsonify(success=False), 403
+
     #Starts pipe server
     pipeName, pipeHandle = init_pipe_server()
     init_response = checkPipe(pipeHandle)
@@ -38,8 +50,7 @@ def start_pipe_server():
         response = jsonify(success=False)
 
     return response
-    
-
+        
 def start_tracking(pipeHandle):
     Tracker = DetectionWidget()
     track_flag = True
@@ -193,11 +204,218 @@ def checkPipe(pipeHandle):
 
     except pywintypes.error as e:
         pipeState = False
-
+    
     return pipeState
 
-
+        
 if __name__ == "__main___":
     app.run(debug = True)
 
         
+
+# @app.route('/api/cf_createTrialLicense', methods = ["GET", "POST"])
+# def cf_createTrialLicense():
+#     """Google Cloud function to create a Trial License Key
+#         This function contains the confidential ACCESS TOKENS that are
+#         not to be shared to customers.
+#     Returns: Tuple 
+#         int: 0 or 1 signifying success(0) or failure(1)
+#         string: Error message if error or trial_key if success
+#     """
+#     RSAPubKey = "<RSAKeyValue><Modulus>stP6+ZYvVTNNPnReyTr8oiTxTq9NgUHK09wIns+jZCmncfJn4QOxc0X7LfkaqZcRdhvjGtXFBvwn6Tn8z159dOETHGUzPMyc8r6RKWG0i2q0ChYUFbyiZZcvHpQR4bXLf25Mb0+DSMIcDqWNCbjytSG8dPpvhomGUFTeHp9xbePdhZyH0wiw5LF+CIxBghBBgpRGCxJ7JqffIjs7E/vqTc4I5jMUc4IeEtJ6KzPZYRjKz+sHbZFxNd82qe1WlYXAjz4PF6kZo/SXO9QVJ5XKoULvkxsxfSdwS8fQHOLCsrLkpI17Einp8ZySqiYJu/0kpZENWv9Rao0771+wVzAaBw==</Modulus><Exponent>AQAB</Exponent></RSAKeyValue>"
+#     TRIAL_AUTH = "WyIyMzE0ODIiLCJrenpSZ291Umk5TG0rRnVhWk1RbXI4RU45T1grUDNrSzhoaTM3VlVRIl0="
+#     AUTH = "WyIyMzE0NTQiLCIwNGVYNWZad2wybldBVmNkTFo1dkdJYTM3VTFOREdOelpiZjNucERNIl0="
+#     machine_code = request.form.get('machine_code')
+
+#     created_key = Key.create_trial_key(token=TRIAL_AUTH,\
+#     product_id=8730, \
+#     machine_code = machine_code)
+#     if created_key[0] is not None:
+#         print("Created a new trial license. Activating as Trial")
+#         trial_key = created_key[0]
+#         result = Key.activate(token=AUTH,\
+#             rsa_pub_key=RSAPubKey,\
+#             product_id=8730, \
+#             key=trial_key,\
+#             machine_code=machine_code,
+#             metadata=True)
+
+#         if result[0] is not None:
+#             return jsonify(0, trial_key)
+#         else:
+#             return jsonify(1,result[1])
+#     else:
+#         return jsonify(1,created_key[1])
+
+
+# @app.route('/api/cf_check_license', methods = ["GET", "POST"])
+# def cf_check_license():
+#     """A google cloud function that verifies the license
+#     Input comes from request object
+
+#     Returns:
+#         JSON object: success: True/False
+#     """
+#     RSAPubKey = "<RSAKeyValue><Modulus>stP6+ZYvVTNNPnReyTr8oiTxTq9NgUHK09wIns+jZCmncfJn4QOxc0X7LfkaqZcRdhvjGtXFBvwn6Tn8z159dOETHGUzPMyc8r6RKWG0i2q0ChYUFbyiZZcvHpQR4bXLf25Mb0+DSMIcDqWNCbjytSG8dPpvhomGUFTeHp9xbePdhZyH0wiw5LF+CIxBghBBgpRGCxJ7JqffIjs7E/vqTc4I5jMUc4IeEtJ6KzPZYRjKz+sHbZFxNd82qe1WlYXAjz4PF6kZo/SXO9QVJ5XKoULvkxsxfSdwS8fQHOLCsrLkpI17Einp8ZySqiYJu/0kpZENWv9Rao0771+wVzAaBw==</Modulus><Exponent>AQAB</Exponent></RSAKeyValue>"
+#     AUTH = "WyIyMzE0NTQiLCIwNGVYNWZad2wybldBVmNkTFo1dkdJYTM3VTFOREdOelpiZjNucERNIl0="
+#     TRIAL_AUTH = "WyIyMzE0ODIiLCJrenpSZ291Umk5TG0rRnVhWk1RbXI4RU45T1grUDNrSzhoaTM3VlVRIl0="
+#     key = request.form.get('key')
+#     machine_code = request.form.get('machine_code')
+
+#     result = Key.activate(token=AUTH,\
+#                     rsa_pub_key=RSAPubKey,\
+#                     product_id=8730, \
+#                     key=key,\
+#                     machine_code=machine_code,
+#                     fields_to_return=all,
+#                     metadata=True)
+
+#     if result[0] == None or not Helpers.IsOnRightMachine(result[0]):
+#         if result[1] == 'Could not find the key.':
+#             print('Could not find the key.')
+
+#         elif result[1] == 'The key is blocked and cannot be accessed.':
+#             print('Your trial has expired or you may have an expired Key')
+
+#         else:
+#             print(f'Error with License:{result[1]}')
+            
+#         return jsonify(success=False)
+    
+#     else:
+#         # everything went fine if we are here!
+#         print("The license is valid!")
+#         license_key = result[0]
+#         print("Feature 1: " + str(license_key.f1))
+#         print("License expires: " + str(license_key.expires))
+#         return jsonify(success=True)
+
+
+# @app.route('/api/check_license', methods = ["GET", "POST"])
+# def check_license(): 
+#     res = check_license_2()
+#     print(f'result:{res}')
+
+#     if res is True:
+#         pass
+#     else:
+#         buy_license()
+#     return jsonify(success=True)
+
+
+# def buy_license(trial_finished=True):
+#     buy_license_url = 'http://127.0.0.1:5000/api/cf_buy_license' #Cloud function URL  
+#     create_customer_url =
+#     #Start Dialog Box
+#     if trial_finished:
+#         message = "Your Trial period has ended. Would you like to purchase a perpetual license?"
+#     else:
+#         message = "Would you like to purchase a perpetual license?"
+    
+#     answer = mb.askquestion('License',message)
+#     if answer == 'yes':
+#         #Get User Information
+
+
+#         user_infromation_payload = {
+#             'token':
+#             'Name':
+#             'E'
+#         }
+
+
+#         response = requests.post(buy_license_url)
+#         if response.json()['success'] is True:
+#             #Open Dialog to enter License Key
+        
+
+#     else:
+#         root.destroy()
+#         return False
+
+
+# @app.route('/api/cf_buy_license', methods = ["GET", "POST"])
+# def cf_buy_license():
+#     #Cloud function called to allow customer to purchase a license
+
+#     create_key_token = 'WyIyMzczNDQiLCJsZThVdTBvUHRIUnFSamQwVEVONVZCM3ZTMHRxOElzTi9yaitqUlYrIl0='
+#     create_key_url = f'https://app.cryptolens.io/api/key/CreateKey?token={create_key_token}&ProductId=8730&Period=1&F1=True&F2=False&F3=False&F4=False&F5=False&F6=False&F7=False&F8=False&Block=False&CustomerId=0&TrialActivation=True&MaxNoOfMachines=1&NoOfKeys=0&NewCustomer=False&AddOrUseExistingCustomer=False&ResellerId=0&EnableCustomerAssociation=False&AllowActivationManagement=False'
+#     paymentform_token ='WyIyNDA0NzQiLCIzeVJWVUVlOHdqWjJwb2U1b2h6eWJXaDA3a2JnaUFHdVUvdjZFNjJUIl0='    
+#     create_session_url = 'https://app.cryptolens.io/api/paymentform/CreateSession'
+#     create_user_url = f'https://app.cryptolens.io/api/customer/AddCustomer?Name={customer_name}&token={paymentform_token}'
+    
+    
+#     #Create Customer
+#     customer_result = AddCustomer.create_customer(token = paymentform_token, 
+#         name='Tumus', email='tomads@gmail.com', company_name='Fesas' )
+
+#     if customer_result['result'] == 0:
+#         #Sucessfully added a customer
+#         customer_id = customer_result['cusomterId']
+    
+#     else:
+#         print(f'Session creation failed due to:{session_result['message']}') 
+
+    
+#     session_result = PaymentForm.create_session(paymentform_token, 750, 
+#         currency = 'USD', expires=300, price =150, 
+#         heading='NDI Face Track', product_name='NDI Face Track')[0]
+    
+#     if session_result['result'] == 0:
+#         #Successful session
+#         session_id = session_result['sessionId']
+
+#         #Start payment form
+#         payment_url =  f'https://app.cryptolens.io/form/P/giZq28aW/750?sessionId={session_id}'
+#         import webbrowser
+#         webbroweser.open(payment_url)
+#     else:
+#         print(f'Session creation failed due to:{session_result['message']}') 
+
+
+# def check_license_2():
+#     RSAPubKey = "<RSAKeyValue><Modulus>stP6+ZYvVTNNPnReyTr8oiTxTq9NgUHK09wIns+jZCmncfJn4QOxc0X7LfkaqZcRdhvjGtXFBvwn6Tn8z159dOETHGUzPMyc8r6RKWG0i2q0ChYUFbyiZZcvHpQR4bXLf25Mb0+DSMIcDqWNCbjytSG8dPpvhomGUFTeHp9xbePdhZyH0wiw5LF+CIxBghBBgpRGCxJ7JqffIjs7E/vqTc4I5jMUc4IeEtJ6KzPZYRjKz+sHbZFxNd82qe1WlYXAjz4PF6kZo/SXO9QVJ5XKoULvkxsxfSdwS8fQHOLCsrLkpI17Einp8ZySqiYJu/0kpZENWv9Rao0771+wVzAaBw==</Modulus><Exponent>AQAB</Exponent></RSAKeyValue>"
+#     verify_url = 'http://127.0.0.1:5000/api/cf_check_license' #Cloud function URL
+#     trial_url = 'http://127.0.0.1:5000/api/cf_createTrialLicense' #Cloud function URL  
+
+#     # Read license file from file
+#     with open('licensefile.txt', 'r+') as f:
+#         license_key = f.read()
+
+#         #Simple Length Filter
+#         if len(license_key) != 23:
+#             print("NOTE: This license file cannot be verified.")
+#             print("Requesting a Trial Key")
+#             param = {
+#             'machine_code': Helpers.GetMachineCode(),
+#             }
+#             response = requests.post(trial_url, data=param)
+        
+#             if response.json()[0] is 0:
+#                 trial_key = response.json()[1]
+#                 #Save trial Key
+#                 f.seek(0)
+#                 f.write(trial_key)
+#                 f.truncate()
+#                 f.flush()
+#                 print(f'Message:{response.json()[1]}')
+#                 return True
+            
+#             else:
+#                 print(f'Could not generate a Trial key. Error Message: {response.json()[1]}')
+#                 return False
+
+#         else:
+#         #Request a Verification of current key
+#             param = {
+#             'machine_code': Helpers.GetMachineCode(),
+#             'key': license_key
+#             }
+#             response = requests.post(verify_url, data=param)
+#             print(f'Message:{response.json()}')
+
+#             if response.json()['success'] is True:
+#                 return True
+#             else:
+#                 print('Verification was not a success')
+#                 return False
