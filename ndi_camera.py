@@ -8,7 +8,7 @@ import ptvsd
 
 class ndi_camera:
     def __init__(self):
-        ptvsd.debug_this_thread()
+        #ptvsd.debug_this_thread()
     
         sources = []
         ndi_find = None

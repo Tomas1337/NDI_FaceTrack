@@ -105,7 +105,7 @@ class Yolov3(object):
         self.detections = []
 
 
-    def update(self, frames, frameCenter, minConf = 0.4, threshold = 0.5):
+    def update(self, frames, minConf = 0.4, threshold = 0.5):
         idxs = []
         self.boxes = []
         self.confidences = []
