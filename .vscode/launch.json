@@ -9,7 +9,7 @@
             "name": "Python: FaceTrackInterface_10",
             "type": "python",
             "request": "launch",
-            "program": "${file}",
+            "program": "FaceTrackInterface.py",
             "console": "integratedTerminal",
             "python": "${command:python.interpreterPath}"
             

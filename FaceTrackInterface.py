@@ -521,9 +521,10 @@ class DetectionWidget(QObject):
         self.b_tracker = None
         self.f_tracker = None
 
-        #Object Detectors
+        #Object Detectorsw
         self.face_obj = FastMTCNN() #TRY THIS FIRST
-        self.body_obj = Yolov3()
+        #self.body_obj = Yolov3()
+        self.body_obj = Yolo_v4TINY()
 
         #Slider and button Values
         self.y_trackState = True
@@ -557,7 +558,7 @@ class DetectionWidget(QObject):
         if not self.f_tracker is None:
             tic = time.time()
             ok, position = self.f_tracker.update(frame)
-            print("Face Tracker update takes:{:.2f}s".format(time.time() - tic))
+            #print("Face Tracker update takes:{:.2f}s".format(time.time() - tic))
             if self.frame_count % 300== 0:
                 print('Running a {}s check'.format(300/30))
                 test_coords = self.face_obj.get_all_locations(frame)
@@ -688,8 +689,6 @@ class DetectionWidget(QObject):
             self.reset_tracker()
             self.reset_trigger = False
 
-
-
         (H, W) = frame.shape[:2]
         centerX = self.center_coords[0]
         centerY = self.center_coords[1]
@@ -712,63 +711,6 @@ class DetectionWidget(QObject):
             body_coords = self.body_tracker(frame)
 
     
-        # #Face Locking
-        # """
-        # Check if the face_lock button is activated
-        # If activated, check if we have something locked on already
-        #     If yes, check to see if current face matches any of the known_face_encodings
-        #     If it does not match:
-        #         Scan the whole frame for faces and put into a list the detected face_coords
-        #         Loop on each face coord:
-        #             Extract encodings of face coord
-        #             Check to see if looped encoding have matches in the known_face_encodings
-        #         This will output the matches list which contains:
-        #             Results = [False, False, Index]
-        #             False means no match of current face to known face encodings
-        #             Index means best index match of current faces among the known faces
-        #         Get the first non False Value
-        #         Use that to change to the new face_coords
-
-        #     If not locked on; This assumes that you want to register a new face
-        #         Try to register new face
-        #         If able to register new face, change the face_locked_on state to True
-
-        # """
-        # self.face_lock_state = False
-        # if self.face_lock_state is True and self.frame_count%30==0:        
-        #     if self.face_lock.face_locked_on is True:
-        #         #Check to see if detected face matches the list of known faces
-        #         current_face_encoding = self.face_lock.face_encode(frame, face_coords)
-        #         if self.face_lock.does_it_match(current_face_encoding) is not False:
-        #             print("Current face Matches")
-        #             pass
-        #         else:
-        #             print('Current Face does not match')
-        #             temp_face_coords = self.face_obj.get_all_locations(frame)
-        #             results = []
-        #             for i in temp_face_coords:
-        #                 current_face_encoding = self.face_lock.face_encode(frame, [i])
-        #                 result = self.face_lock.does_it_match(current_face_encoding)
-        #                 results.append(result)
-                    
-        #             if any(results) != False:
-        #                 f = next((i for i, x in enumerate(results) if x), None) 
-        #                 face_coords = temp_face_coords[f]
-
-        #             else:
-        #                 face_coords = []
-
-        #     elif self.face_lock.face_locked_on is False:
-        #         ok_register = self.face_lock.register_new_face(frame, face_coords)
-        #         self.face_lock.face_locked_on = ok_register
-                
-        #         if ok_register:
-        #             print('Sucessfully registerd new face')
-        #         else:
-        #             print('Failed to register new face')
-
-        #Cascade to choose between whether to home to face or body. 
-        #Face tracking takes priority
 
         try:
             x,y,w,h = face_coords

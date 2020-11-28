@@ -83,12 +83,11 @@ class PTZ_Controller_Novel():
             #time.sleep(0.06)
             #print(val)
 
-def test():
+def _test():
     m = PTZ_Controller_Novel()
     m._test(m)
 
 
-#test()
 
 
 
