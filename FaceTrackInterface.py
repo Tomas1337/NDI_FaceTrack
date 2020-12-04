@@ -636,8 +636,8 @@ class DetectionWidget(QObject):
                 x,y,w,h = [0 if i < 0 else int(i) for i in [x,y,w,h]]
 
             elif len(boxes) > 1 and len(self.face_coords) >= 1:
-                for i, g in enumerate(boxes):
-                    if self.overlap_metric(g, self.face_coords) >= 0.5:
+                for i, box in enumerate(boxes):
+                    if self.overlap_metric(box, self.face_coords) >= 0.5:
                         x,y,w,h = [0 if i < 0 else int(i) for i in [x,y,w,h]]
                         x,y,w,h = [int(p) for p in boxes[i]]
                         break
@@ -903,7 +903,9 @@ class DetectionWidget(QObject):
 
 def main():
     app = QApplication(sys.argv)
-    style_file = QFile("styling/dark.qss")
+    style_name = "styling/dark.qss"
+    style_path = os.path.abspath(os.path.dirname(__file__))
+    style_file = QFile(os.path.join(style_path,style_name))
     style_file.open(QFile.ReadOnly | QFile.Text)
     stream = QTextStream(style_file)
     app.setStyleSheet(stream.readAll())

@@ -1,10 +1,14 @@
 
+##12/02
+1. Build using venv_1202
+	Add: facenet_pytorch
+	Add: modified torchvision (of 0715)*
+	Add: torch_python.dll*
+	*torch with torch.jit._script_if_tracing
+	*torchvision with torch.jit._script_if_tracing
 
-
-Bugs:
-1. Secondary Lost trackign sequence constantly moves the camera to the side when 'left' or 'right' tracking.
-
-
+	The changes are @torch.jit.script to torch.jit._script_if_tracing in torch and torchvision
+	Add the torch.jit._script_if_tracing method
 
 ##07/15
 1. Build using venv_0715
@@ -21,7 +25,7 @@ Bugs:
 1. Build using venv_0705
 	Add: facenet_pytorch
 	Add: torchvision
-	Add: face_recogntion
+	Add: face_recpipogntion
 	Addl face_recogntion_models
 
 

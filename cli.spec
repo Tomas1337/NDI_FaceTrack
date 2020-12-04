@@ -3,10 +3,10 @@
 block_cipher = None
 
 a = Analysis(['cli.py'],
-             pathex=['C:\\Program Files (x86)\\Windows Kits\\10\\Redist\\10.0.18362.0\\ucrt\\DLLs\\x64','C:\\Projects\\NDI_FaceTrack'],
+             pathex=['C:\\Program Files (x86)\\Windows Kits\\10\\Redist\\10.0.18362.0\\ucrt\\DLLs\\x64','C:\\Projects\\NDI_FaceTrack_v1\\NDI_FaceTrack'],
              binaries=[('Processing.NDI.Lib.x64.dll', '.')],
-             datas=[('models', 'models'), ('det','det'),('styling','styling'),('C:\\Projects\\VEnvs\\venv_0715\\Lib\\site-packages\\torch\\lib\\torch_python.dll','.')],
-             hiddenimports=['pkg_resources.py2_warn','torch','torchvision','facenet_pytorch','cv2', 'scipy', 'keyboard'],
+             datas=[('models', 'models'),('styling','styling'),('config.ini','.'),('config.py','.')],
+             hiddenimports=['pkg_resources.py2_warn','cv2', 'scipy', 'keyboard'],
              hookspath=[],
              runtime_hooks=[],
              excludes=['ptvsd','matplotlib'],
@@ -14,8 +14,10 @@ a = Analysis(['cli.py'],
              win_private_assemblies=False,
              cipher=block_cipher,
              noarchive=False)
+
 pyz = PYZ(a.pure, a.zipped_data,
              cipher=block_cipher)
+
 exe = EXE(pyz,
           a.scripts,
           [],
@@ -25,7 +27,8 @@ exe = EXE(pyz,
           bootloader_ignore_signals=False,
           strip=False,
           upx=True,
-          console=False)
+          console=True)
+
 coll = COLLECT(exe,
                a.binaries,
                a.zipfiles,

@@ -1,13 +1,9 @@
-import imutils
-import cv2
-import time
+import time, cv2, os, imutils
 import numpy as np
 from facenet_pytorch import MTCNN
 from imutils.object_detection import non_max_suppression
-#import face_recognition
-import os
-import ptvsd
-import time
+
+CURR_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),".."))
 
 class FastMTCNN(object):
     """Fast MTCNN implementation."""
@@ -86,12 +82,11 @@ class FastMTCNN(object):
 #Open CV DNN Module implementation
 #NO GPU yet; OpenCV doesn't support GPU implementation easily. 
 class Yolov3(object):
-
     def __init__(self):
         np.random.seed(42)
-        weightsPath = "models/yolov3-tiny-prn.weights"
-        configPath = "models/yolov3-tiny-prn.cfg"
-        labelsPath = "models/coco.names"
+        weightsPath = os.path.join(CURR_PATH, "models/yolov3-tiny-prn.weights")
+        configPath = os.path.join(CURR_PATH, "models/yolov3-tiny-prn.cfg")
+        labelsPath = os.path.join(CURR_PATH, "models/coco.names")
         self.LABELS = open(labelsPath).read().strip().split("\n")
         self.net = cv2.dnn.readNetFromDarknet(configPath, weightsPath)
         # self.net.setPreferableBackend(cv2.dnn.DNN_BACKEND_CUDA)
@@ -148,24 +143,24 @@ class Yolov3(object):
         idxs = cv2.dnn.NMSBoxes(self.boxes, self.confidences, minConf, threshold)
         return idxs, self.boxes, self.COLORS, self.LABELS, self.classIDs, self.confidences
 
-
 class Yolo_v4TINY(object):
     CONFIDENCE_THRESHOLD = 0.2
     NMS_THRESHOLD = 0.4
     COLORS = [(0, 255, 255), (255, 255, 0), (0, 255, 0), (255, 0, 0)]
     
     def __init__(self):
-        labelsPath = "models/coco.names"
+        labelsPath = os.path.join(CURR_PATH, "models\coco.names")
+        weightsPath = os.path.join(CURR_PATH, "models\yolov4-tiny.weights")
+        configPath = os.path.join(CURR_PATH, "models\yolov4-tiny.cfg")
         self.LABELS = open(labelsPath).read().strip().split("\n")
-        self.net = cv2.dnn.readNet("models/yolov4-tiny.weights", "models/yolov4-tiny.cfg")
+        self.net = cv2.dnn.readNet(weightsPath, configPath)
         self.net.setPreferableBackend(cv2.dnn.DNN_BACKEND_CUDA)
         self.net.setPreferableTarget(cv2.dnn.DNN_TARGET_CUDA_FP16)
-
         self.model = cv2.dnn_DetectionModel(self.net)
         self.model.setInputParams(size=(416, 416), scale=1/255)
 
     def update(self, frames, minConf = 0.4, threshold = 0.5):
-        ptvsd.debug_this_thread()
+        #ptvsd.debug_this_thread()
         idxs = []
         self.boxes = []
         self.confidences = []
@@ -193,6 +188,7 @@ class Yolo_v4TINY(object):
             return None, self.boxes, None, None, None,self.confidences
         else:
             return None, [], None, None, None, None
+
 class Face_Locker(object):
     """Class that enables facial recognition to allow the Program to track only faces in memory.
     Uses face encodings to differentiate between faces.
@@ -217,6 +213,7 @@ class Face_Locker(object):
         #ptvsd.debug_this_thread()
         scale_factor = 0.25
         """
+        TODO: Change paths to be dynamic
         Expects a frame in the face with, with face_coords for ONE face in the format x1,y1,w,h
         Face encodings take the format [[y1, x2, y2, x1]] (List of Tuples)
 
