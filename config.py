@@ -5,7 +5,6 @@ my_path = os.path.abspath(os.path.dirname(__file__))
 DEFAULT_CONFIG_FILE = 'config.ini'
 config_path = os.path.join(my_path, DEFAULT_CONFIG_FILE)
 
-print(f'YO READING CONFIG FROM: {config_path}')
 def get_config_file():
     return os.environ.get('CONFIG_FILE', config_path)
 
