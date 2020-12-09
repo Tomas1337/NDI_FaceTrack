@@ -10,25 +10,27 @@ from face_tracking.objcenter import *
 from ndi_camera import ndi_camera
 import numpy as np
 import NDIlib as ndi
-import cv2, dlib, time, styling, sys
+import cv2, dlib, time, styling, sys, keyboard, argparse, threading
 from tool.custom_widgets import *
 from face_tracking.camera_control import *
-import keyboard
 from config import CONFIG
+#import ptvsd
 
 class MainWindow(QMainWindow):
     signalStatus = pyqtSignal(str)
     track_type_signal = pyqtSignal(int)
     face_track_signal = pyqtSignal(np.ndarray)
+    preset_camera_signal = pyqtSignal()
 
-    def __init__(self, parent = None):
+    def __init__(self, parent = None, args = None):
         super(MainWindow, self).__init__(parent)
         
         #Initialize the GUI object
         #Create a new worker thread
+        self.args = args
         self.gui = WindowGUI(self)
         self.setCentralWidget(self.gui) 
-        self.createWorkerThread()
+        self.createThreads()
         self.createMenuBar()
 
         #Make any cross object connections
@@ -38,12 +40,13 @@ class MainWindow(QMainWindow):
         self.gui.show()
         self.setFixedSize(700, 660)
 
+        if args is not None:
+            self.preset_camera_signal.emit()
+
     def _connectSignals(self):
         self.signalStatus.connect(self.gui.updateStatus)
         self.track_type_signal.connect(self.face_detector.set_track_type)
         self.sources.aboutToShow.connect(self.worker.findSources)
-        self.sources.aboutToShow.connect(self.worker_thread.start)
-        #self.aboutToQuit.connect(self.forceWorkerQuit)
 
     def createMenuBar(self):
         bar = self.menuBar()
@@ -55,25 +58,30 @@ class MainWindow(QMainWindow):
         for i, item in enumerate(_list):
             entry = self.sources.addAction(item)
             self.sources.addAction(entry)
+            entry.triggered.connect(self.vid_worker.stop_read_video)
             #Lamda function to connect the menu item with it's index
             entry.triggered.connect(lambda e, x=i: self.worker.connect_to_camera(x))
-            entry.triggered.connect(self.vid_worker_thread.start)
+            
 
     ### SIGNALS
-    def createWorkerThread(self):
-        self.worker = WorkerObject()
+    def createThreads(self):
+        self.worker = WorkerObject(args = self.args)
         self.worker_thread = QThread()  
         self.worker.moveToThread(self.worker_thread)
+        self.worker_thread.start()
         
         self.vid_worker = Video_Object()
         self.vid_worker_thread = QThread()
         self.vid_worker.moveToThread(self.vid_worker_thread)
+        
 
         self.face_detector = DetectionWidget()
         self.face_detector.moveToThread(self.vid_worker_thread)
+        self.vid_worker_thread.start()
 
         #Connect any worker signals
         self.worker.signalStatus.connect(self.gui.updateStatus)
+        self.worker.ptz_object_signal.connect(self.vid_worker.stop_read_video)
         self.worker.ptz_object_signal.connect(self.vid_worker.read_video)
         self.worker.ptz_list_signal.connect(self.populateSources)
         self.worker.info_status.connect(self.gui.updateInfo)
@@ -104,6 +112,8 @@ class MainWindow(QMainWindow):
         self.gui.reset_default_button.clicked.connect(self.gui.reset_defaults_handler)
         self.gui.home_pos.mouseReleaseSignal.connect(self.face_detector.getTrackPosition)
 
+        self.preset_camera_signal.connect(self.worker.connect_to_preset_camera)
+    
     def forceWorkerQuit(self):
         if self.worker_thread.isRunning():
             self.worker_thread.terminate()
@@ -337,14 +347,16 @@ class WorkerObject(QObject):
     info_status = pyqtSignal(str)
     enable_controls_signal = pyqtSignal()
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, args = None):
         super(self.__class__, self).__init__(parent)
         self.ndi_cam = None
+        self.args = args
     
     @pyqtSlot()
     def findSources(self):
         self.ndi_cam = ndi_camera()
         self.signalStatus.emit('Searching for PTZ cameras')
+        self.ndi_cam.find_sources()
         (ptz_list, sources) = self.ndi_cam.find_ptz()
         print("PTZ List: {}".format(ptz_list))
         self.ptz_names = [sources[i].ndi_name for i in ptz_list]
@@ -354,10 +366,20 @@ class WorkerObject(QObject):
     @pyqtSlot(int)
     def connect_to_camera(self, cam_num):
         self.signalStatus.emit('Connecting to camera') 
-        ndi_recv = self.ndi_cam.camera_connect(cam_num)
+        ndi_recv = self.ndi_cam.camera_connect(src=cam_num)
         self.signalStatus.emit('Connected to {}'.format(self.ptz_names[cam_num]))
         self.ptz_object_signal.emit(ndi_recv)
         self.info_status.emit('Signal: {}'.format(self.ptz_names[cam_num]))
+        self.enable_controls_signal.emit()
+
+    @pyqtSlot()
+    def connect_to_preset_camera(self):
+        self.ndi_cam = ndi_camera()
+        self.signalStatus.emit('Connecting to Preset camera')
+        name = self.args['name']
+        ndi_recv = self.ndi_cam.camera_connect(ndi_name=name)
+        self.ptz_object_signal.emit(ndi_recv)
+        self.info_status.emit(f'Signal: {name}')
         self.enable_controls_signal.emit()
 
 #Handles the reading and displayingg of video
@@ -376,21 +398,25 @@ class Video_Object(QObject):
         super(self.__class__, self).__init__(parent)
         self.face_track_state = False
         self.frame_count = 1
-        self.skip_frames = 1
+        self.read_video_flag = True
         self.keypress = False
 
+    @pyqtSlot()
+    def stop_read_video(self):
+        self.read_video_flag = False
+    
     @pyqtSlot(object)
     def read_video(self, ndi_object):
-        FRAME_WIDTH = 640
+        #ptvsd.debug_this_thread()
+        FRAME_WIDTH = 640   
         FRAME_HEIGHT = 360
         self.ndi_recv = ndi_object
         fps_start_time = time.time()
-        diplsay_time_counter = 1
+        diplsay_time_counter = 1    
         fps_counter = 0
-
-        while True:
-            t,v,_,_ = ndi.recv_capture_v2(self.ndi_recv, 1)
-            
+        self.read_video_flag = True
+        while self.read_video_flag:
+            t,v,_,_ = ndi.recv_capture_v2(self.ndi_recv, 0)
             if t == ndi.FRAME_TYPE_VIDEO:
                 self.frame_count += 1   
                 frame = v.data
@@ -454,7 +480,13 @@ class Video_Object(QObject):
                     fps = fps_counter/ (time.time()-fps_start_time)
                     self.FPSSignal.emit(fps)
                     fps_counter = 0
-                    fps_start_time = time.time()
+                    fps_start_time = time.time()    
+                
+                self.frame_none_count = 0
+            
+            else:
+                QApplication.processEvents()
+
 
     @pyqtSlot(bool)
     def detect_face_track_state(self, state):
@@ -901,7 +933,13 @@ class DetectionWidget(QObject):
         self.center_coords = (xVel, yVel)
         print(f'coordinates are {self.center_coords}')
 
-def main():
+def main(args_dict = None):
+    parser = argparse.ArgumentParser(description='Argument Parsing NDI_FaceTrack')
+    parser.add_argument('-n', '--name', default = None, help = "Provide the Name of the Camera to connect to Format: NameXXX (DeviceXXX)")
+    args = parser.parse_args()
+    args_dict = vars(args)
+    print(args_dict)
+
     app = QApplication(sys.argv)
     style_name = "styling/dark.qss"
     style_path = os.path.abspath(os.path.dirname(__file__))
@@ -909,7 +947,7 @@ def main():
     style_file.open(QFile.ReadOnly | QFile.Text)
     stream = QTextStream(style_file)
     app.setStyleSheet(stream.readAll())
-    main = MainWindow()
+    main = MainWindow(args = args_dict)
     main.show()
     sys.exit(app.exec_())
 

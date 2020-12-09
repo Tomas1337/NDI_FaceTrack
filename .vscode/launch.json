@@ -6,13 +6,23 @@
     "configurations": [
         
         {
-            "name": "Python: FaceTrackInterface_10",
+            "name": "Preset Camera Configuration",
+            "type": "python",
+            "request": "launch",
+            "program": "FaceTrackInterface.py",
+            "console": "integratedTerminal",
+            "args": ["--name","DESKTOP-C16VMFB (VLC)"],
+            //"args" : ["DESKTOP-C16VMFB (VLC)"],
+            "python": "${command:python.interpreterPath}"
+            
+        },
+        {
+            "name": "Stand-Alone",
             "type": "python",
             "request": "launch",
             "program": "FaceTrackInterface.py",
             "console": "integratedTerminal",
             "python": "${command:python.interpreterPath}"
-            
         }
     ]
 }

@@ -23,11 +23,11 @@ exe = EXE(pyz,
           [],
           exclude_binaries=True,
           name='NDI_FaceTrack',
-          debug=1,
+          debug=False,
           bootloader_ignore_signals=False,
           strip=False,
           upx=True,
-          console=True)
+          console=False)
 
 coll = COLLECT(exe,
                a.binaries,
@@ -35,4 +35,4 @@ coll = COLLECT(exe,
                a.datas,
                strip=False,
                upx=True,
-               name='cli')
+               name='Tracking')
