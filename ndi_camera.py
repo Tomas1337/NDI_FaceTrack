@@ -3,9 +3,6 @@ import numpy as np
 import cv2 as cv
 import NDIlib as ndi
 import time
-#import ptvsd
-
-
 class ndi_camera:
     def __init__(self):
         #ptvsd.debug_this_thread()

@@ -1,9 +1,9 @@
 __author__ = "Tomas Lastrilla"
 __version__ = "0.1.1"
 
-from PyQt5.QtCore import QSize, Qt, QMimeData, QPointF, pyqtSignal
-from PyQt5.QtWidgets import QGraphicsTextItem, QGridLayout, QPushButton, QSizePolicy, QLabel, QVBoxLayout, QWidget, QApplication, QGraphicsView, QGraphicsScene, QGraphicsEllipseItem
-from PyQt5.QtGui import QPainter, QColor, QFont, QIcon, QDrag, QPixmap
+from PySide2.QtCore import QSize, Qt, QMimeData, QPointF, Signal
+from PySide2.QtWidgets import QGraphicsTextItem, QGridLayout, QPushButton, QSizePolicy, QLabel, QVBoxLayout, QWidget, QApplication, QGraphicsView, QGraphicsScene, QGraphicsEllipseItem
+from PySide2.QtGui import QPainter, QColor, QFont, QIcon, QDrag, QPixmap
 import sys
 
 
@@ -59,7 +59,7 @@ class QTrackingButton(QPushButton):
 
 
 class MovingObject(QGraphicsTextItem):
-    mouseReleaseSignal = pyqtSignal(int, int)
+    mouseReleaseSignal = Signal(int, int)
     def __init__(self, x ,y, scene_width, scene_height):
         super().__init__()
         self.setAcceptHoverEvents(True)
@@ -118,7 +118,7 @@ class MovingObject(QGraphicsTextItem):
         return (self.center_x, self.center_y)
 
 class GraphicView(QGraphicsView):
-    mouseReleaseSignal = pyqtSignal(int, int)
+    mouseReleaseSignal = Signal(int, int)
     def __init__(self, parent):
         super(GraphicView, self).__init__(parent)
  

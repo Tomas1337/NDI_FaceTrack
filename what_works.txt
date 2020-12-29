@@ -10,6 +10,8 @@
 	The changes are @torch.jit.script to torch.jit._script_if_tracing in torch and torchvision
 	Add the torch.jit._script_if_tracing method
 
+	*torch version that works with python 3.7 are torch=1.3.1 and torchvision=0.4.2
+
 ##07/15
 1. Build using venv_0715
 	Add: facenet_pytorch

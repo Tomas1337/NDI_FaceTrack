@@ -6,7 +6,7 @@ import ptvsd
 CURR_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),".."))
 
 class FastMTCNN(object):
-    """Fast MTCNN implementation."""
+    """MTCNN implementation."""
     
     def __init__(self):
         self.resize = 0.5
@@ -171,14 +171,11 @@ class Yolo_v4TINY(object):
         if len(classIDs) > 0:
             mask = classIDs == 0
             curr_score = 0
-            try:
-                for index, p in enumerate(mask):
-                    if p == True and scores[index] >= curr_score:
-                        curr_score = scores[index]
-                        top = index
-                        self.confidences.append(curr_score)
-            except TypeError:
-                print('error here')
+            for index, p in enumerate(mask):
+                if p == True and scores[index] >= curr_score:
+                    curr_score = scores[index]
+                    top = index
+                    self.confidences.append(curr_score)
             box = boxes[top]
             (X, Y, width, height) = box.astype("int")
 

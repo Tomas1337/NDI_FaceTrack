@@ -1,11 +1,6 @@
-from PyQt5.QtCore import QTextStream, QFile, QDateTime, QSize, Qt, QTimer,QRect, QThread, QObject, pyqtSignal,pyqtSlot, QRunnable
-from PyQt5.QtWidgets import (QApplication, QCheckBox, QComboBox, QDateTimeEdit,
-        QDial, QDialog, QGridLayout, QGroupBox, QHBoxLayout, QLabel, QBoxLayout,
-        QProgressBar, QPushButton, QButtonGroup,
-        QSlider, QStyleFactory, QTableWidget, QTabWidget, QTextEdit,
-        QVBoxLayout, QWidget, QAbstractButton, QMainWindow, QAction, QMenu,
-        QStyleOptionSlider, QStyle, QSpacerItem, QSizePolicy)
-from PyQt5.QtGui import QImage, QPixmap, QPainter, QBrush, QFont, QPen, QPalette, QColor, QIcon
+from PySide2.QtCore import QTextStream, QFile, QDateTime, QSize, Qt, QTimer,QRect, QThread, QObject, Signal, Slot, QRunnable
+from PySide2.QtWidgets import (QApplication, QCheckBox, QComboBox, QDateTimeEdit, QDial, QDialog, QGridLayout, QGroupBox, QHBoxLayout, QLabel, QBoxLayout, QProgressBar, QPushButton, QButtonGroup, QSlider, QStyleFactory, QTableWidget, QTabWidget, QTextEdit, QVBoxLayout, QWidget, QAbstractButton, QMainWindow, QAction, QMenu, QStyleOptionSlider, QStyle, QSpacerItem, QSizePolicy)
+from PySide2.QtGui import QImage, QPixmap, QPainter, QBrush, QFont, QPen, QPalette, QColor, QIcon
 from face_tracking.objcenter import *
 from ndi_camera import ndi_camera
 import numpy as np
@@ -19,10 +14,10 @@ from config import CONFIG
 #import ptvsd
 
 class MainWindow(QMainWindow):
-    signalStatus = pyqtSignal(str)
-    track_type_signal = pyqtSignal(int)
-    face_track_signal = pyqtSignal(np.ndarray)
-    preset_camera_signal = pyqtSignal()
+    signalStatus = Signal(str)
+    track_type_signal = Signal(int)
+    face_track_signal = Signal(np.ndarray)
+    preset_camera_signal = Signal()
 
     def __init__(self, parent = None, args = None):
         super(MainWindow, self).__init__(parent)
@@ -54,16 +49,17 @@ class MainWindow(QMainWindow):
         bar = self.menuBar()
         self.sources = bar.addMenu("Sources")
 
-    @pyqtSlot(list)
+    @Slot(list)
     def populateSources(self, _list):
         self.sources.clear()
         for i, item in enumerate(_list):
             entry = self.sources.addAction(item)
             self.sources.addAction(entry)
-            entry.triggered.connect(self.vid_worker.stop_read_video)
-            #Lamda function to connect the menu item with it's index
-            entry.triggered.connect(lambda e, x=i: self.worker.connect_to_camera(x))
-            
+        entry.triggered.connect(self.vid_worker.stop_read_video)
+        #Lamda function to connect the menu item with it's index
+        entry.triggered.connect(lambda e=0, x=i: self.worker.connect_to_camera(x))
+
+        #entry.triggered.connect(self.worker.connect_to_camera(i))
 
     ### SIGNALS
     def createThreads(self):
@@ -134,7 +130,7 @@ class MainWindow(QMainWindow):
         except KeyError:
             pass
     
-    @pyqtSlot(np.ndarray)
+    @Slot(np.ndarray)
     def face_track_signal_handler(self, frame):
         self.face_track_signal.emit(frame)
 
@@ -302,11 +298,11 @@ class WindowGUI(QWidget):
         bottom_info_layout.addWidget(self.fps_label)
         layout.addLayout(bottom_info_layout)
 
-    @pyqtSlot(str)
+    @Slot(str)
     def updateStatus(self, status):
         self.label_status.setText(status)
 
-    @pyqtSlot(float)
+    @Slot(float)
     def updateFPS(self, fps):
         if fps < 12:
             self.fps_label.setStyleSheet('color:red')
@@ -314,15 +310,15 @@ class WindowGUI(QWidget):
             self.fps_label.setStyleSheet('color:white')
         self.fps_label.setText(f'{int(round(fps))} FPS')
 
-    @pyqtSlot(float, float)
+    @Slot(float, float)
     def update_speed(self, xVel, yVel):
         self.speed_label.setText(f'X:{round(xVel,2)} Y:{round(yVel, 2)}')
 
-    @pyqtSlot(str)
+    @Slot(str)
     def updateInfo(self, status):
         self.info_panel.setText(status)
         
-    @pyqtSlot(QImage)
+    @Slot(QImage)
     def setImage(self, image):
         img = image.scaled(640, 360, Qt.KeepAspectRatio)
         self.video_frame.setPixmap(QPixmap.fromImage(img))
@@ -343,18 +339,18 @@ class WorkerObject(QObject):
     """
     Class to handle the finding and connecting of NDI Sources/Cameras
     """
-    signalStatus = pyqtSignal(str)
-    ptz_list_signal = pyqtSignal(list)
-    ptz_object_signal = pyqtSignal(object)
-    info_status = pyqtSignal(str)
-    enable_controls_signal = pyqtSignal()
+    signalStatus = Signal(str)
+    ptz_list_signal = Signal(list)
+    ptz_object_signal = Signal(object)
+    info_status = Signal(str)
+    enable_controls_signal = Signal()
 
     def __init__(self, parent=None, args = None):
         super(self.__class__, self).__init__(parent)
         self.ndi_cam = None
         self.args = args
     
-    @pyqtSlot()
+    @Slot()
     def findSources(self):
         self.ndi_cam = ndi_camera()
         self.signalStatus.emit('Searching for PTZ cameras')
@@ -365,7 +361,7 @@ class WorkerObject(QObject):
         self.signalStatus.emit('Idle')
         self.ptz_list_signal.emit(self.ptz_names)
 
-    @pyqtSlot(int)
+    @Slot(int)
     def connect_to_camera(self, cam_num):
         self.signalStatus.emit('Connecting to camera') 
         ndi_recv = self.ndi_cam.camera_connect(src=cam_num)
@@ -374,7 +370,7 @@ class WorkerObject(QObject):
         self.info_status.emit('Signal: {}'.format(self.ptz_names[cam_num]))
         self.enable_controls_signal.emit()
 
-    @pyqtSlot()
+    @Slot()
     def connect_to_preset_camera(self):
         self.ndi_cam = ndi_camera()
         self.signalStatus.emit('Connecting to Preset camera')
@@ -391,10 +387,10 @@ class Video_Object(QObject):
     Since we want the video object to be in-sync with the camera signals, 
     we put the under the same class therefore on the same thread.
     """
-    PixMapSignal = pyqtSignal(QImage)
-    FaceFrameSignal = pyqtSignal(np.ndarray)
-    DisplayNormalVideoSignal = pyqtSignal(QImage)
-    FPSSignal = pyqtSignal(float)
+    PixMapSignal = Signal(QImage)
+    FaceFrameSignal = Signal(np.ndarray)
+    DisplayNormalVideoSignal = Signal(QImage)
+    FPSSignal = Signal(float)
     
     def __init__(self,parent=None):
         super(self.__class__, self).__init__(parent)
@@ -406,11 +402,11 @@ class Video_Object(QObject):
         #TODO Seperate this into a another thread. Just for trial
         #self.bg_matter = BG_Matt()
 
-    @pyqtSlot()
+    @Slot()
     def stop_read_video(self):
         self.read_video_flag = False
     
-    @pyqtSlot(object)
+    @Slot(object)
     def read_video(self, ndi_object):
         #ptvsd.debug_this_thread()
         FRAME_WIDTH = 640   
@@ -501,7 +497,7 @@ class Video_Object(QObject):
                 QApplication.processEvents()
 
 
-    @pyqtSlot(bool)
+    @Slot(bool)
     def detect_face_track_state(self, state):
         self.face_track_state = state
 
@@ -512,7 +508,7 @@ class Video_Object(QObject):
         image = image.rgbSwapped()
         self.DisplayNormalVideoSignal.emit(image)
 
-    @pyqtSlot(float, float)
+    @Slot(float, float)
     def camera_control(self, Xspeed, Yspeed):
         """
         Function to send out the X-Y Vectors to the camera directly
@@ -527,20 +523,20 @@ class Video_Object(QObject):
             ndi.recv_ptz_pan_tilt_speed(self.ndi_recv, Xspeed, Yspeed)
         #ndi.recv_ptz_pan_tilt_speed(self.ndi_recv, 0, 0)
 
-    @pyqtSlot(float)
+    @Slot(float)
     def zoom_camera_control(self, ZoomValue):
         ndi.recv_ptz_zoom_speed(self.ndi_recv, ZoomValue)
 
-    @pyqtSlot(int)
+    @Slot(int)
     def zoom_handler(self, ZoomLevel):
         ndi.recv_ptz_zoom(self.ndi_recv, ZoomLevel/10   )
 
 class DetectionWidget(QObject):
-    DisplayVideoSignal = pyqtSignal(QImage)
-    CameraControlSignal = pyqtSignal(float, float)
-    CameraZoomControlSignal = pyqtSignal(float)
-    signalStatus = pyqtSignal(str)
-    info_status = pyqtSignal(str)
+    DisplayVideoSignal = Signal(QImage)
+    CameraControlSignal = Signal(float, float)
+    CameraZoomControlSignal = Signal(float)
+    signalStatus = Signal(str)
+    info_status = Signal(str)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -721,7 +717,7 @@ class DetectionWidget(QObject):
             cv2.rectangle(frame, (x,y), (x+w,y+h), (255,255,255), 2)
             return x,y,w,h
 
-    @pyqtSlot(np.ndarray)
+    @Slot(np.ndarray)
     def main_track(self, frame):
         """
         Takes in a list where the first element is the frame
@@ -892,7 +888,7 @@ class DetectionWidget(QObject):
         #print(iou)
         return iou
 
-    @pyqtSlot(int)
+    @Slot(int)
     def zoom_handler(self, ZoomLevel):
         """
         Range is 129mm to 4.3mm
@@ -903,44 +899,44 @@ class DetectionWidget(QObject):
         zoom_dict = {0:129, 1:116.53, 2:104.06, 3:91.59, 4: 79.12,5:66.65, 6:54.18, 7:41.71, 8:29.24, 9:16.77, 10:4.3}
         self.focal_length = zoom_dict.get(ZoomLevel)
 
-    @pyqtSlot(int)
+    @Slot(int)
     def gamma_slider_values(self, gamma):
         self.gamma = gamma / 10
 
-    @pyqtSlot(int)
+    @Slot(int)
     def xmin_e_val(self, xminE):
         self.xMinE = xminE / 10
 
-    @pyqtSlot(int)
+    @Slot(int)
     def ymin_e_val(self, yminE):
         self.yMinE = yminE / 10
 
-    @pyqtSlot()
+    @Slot()
     def reset_tracker(self):
         self.b_tracker = None
         self.f_tracker = None
 
-    @pyqtSlot(bool)
+    @Slot(bool)
     def detect_autozoom_state(self, state):
         self.autozoom_state = state
 
-    @pyqtSlot(bool)
+    @Slot(bool)
     def detect_face_lock_state(self, state):
         self.face_lock_state = state
 
-    @pyqtSlot(int)
+    @Slot(int)
     def detect_zoom_state(self, state):
         self.zoom_state = state
 
-    @pyqtSlot(bool)
+    @Slot(bool)
     def detect_ytrack_state(self, state):
         self.y_trackState = state
 
-    @pyqtSlot(int)
+    @Slot(int)
     def set_track_type(self, track_type):
         self.track_type = track_type
 
-    @pyqtSlot(int, int)
+    @Slot(int, int)
     def getTrackPosition(self, xVel, yVel):
         self.center_coords = (xVel, yVel)
         print(f'coordinates are {self.center_coords}')
