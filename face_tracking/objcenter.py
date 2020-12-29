@@ -2,7 +2,7 @@ import time, cv2, os, imutils
 import numpy as np
 from facenet_pytorch import MTCNN
 from imutils.object_detection import non_max_suppression
-
+import ptvsd
 CURR_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),".."))
 
 class FastMTCNN(object):
@@ -160,24 +160,25 @@ class Yolo_v4TINY(object):
         self.model.setInputParams(size=(416, 416), scale=1/255)
 
     def update(self, frames, minConf = 0.4, threshold = 0.5):
-        #ptvsd.debug_this_thread()
+        ptvsd.debug_this_thread()
         idxs = []
         self.boxes = []
         self.confidences = []
         self.classIDs = []
         (H, W) = frames.shape[:2]
-        start = time.time()
         classIDs, scores, boxes = self.model.detect(frames, self.CONFIDENCE_THRESHOLD, self.NMS_THRESHOLD)
-        end = time.time()
 
-        if len(classIDs) >= 0:
+        if len(classIDs) > 0:
             mask = classIDs == 0
             curr_score = 0
-            for index, p in enumerate(mask):
-                if p == True and scores[index] >= curr_score:
-                    curr_score = scores[index]
-                    top = index
-                    self.confidences.append(curr_score)
+            try:
+                for index, p in enumerate(mask):
+                    if p == True and scores[index] >= curr_score:
+                        curr_score = scores[index]
+                        top = index
+                        self.confidences.append(curr_score)
+            except TypeError:
+                print('error here')
             box = boxes[top]
             (X, Y, width, height) = box.astype("int")
 
@@ -194,7 +195,6 @@ class Face_Locker(object):
     Uses face encodings to differentiate between faces.
 
     Not in active development as of 09/24/2020
-
     """
     def __init__(self):
         #Load encodings

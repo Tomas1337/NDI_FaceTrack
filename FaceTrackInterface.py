@@ -14,6 +14,8 @@ import cv2, dlib, time, styling, sys, keyboard, argparse, threading
 from tool.custom_widgets import *
 from face_tracking.camera_control import *
 from config import CONFIG
+#from bg_matting import BG_Matt
+
 #import ptvsd
 
 class MainWindow(QMainWindow):
@@ -401,6 +403,9 @@ class Video_Object(QObject):
         self.read_video_flag = True
         self.keypress = False
 
+        #TODO Seperate this into a another thread. Just for trial
+        #self.bg_matter = BG_Matt()
+
     @pyqtSlot()
     def stop_read_video(self):
         self.read_video_flag = False
@@ -471,10 +476,18 @@ class Video_Object(QObject):
 
                 if self.face_track_state == False:
                     self.display_plain_video(frame)
+
+                    # #BG_Matting Test
+                    # matted_frame = self.bg_matter.predict(frame)
+                    # cv2.imshow('MODNet - WebCam [Press \'Q\' To Exit]', matted_frame)
+                    # if cv2.waitKey(1) & 0xFF == ord('q'):
+                    #     break
+                    
                 elif self.face_track_state == True:
                     self.FaceFrameSignal.emit(frame)
                 ndi.recv_free_video_v2(self.ndi_recv, v)
 
+                #Measuring FPS
                 fps_counter += 1
                 if (time.time() - fps_start_time) > diplsay_time_counter:
                     fps = fps_counter/ (time.time()-fps_start_time)
@@ -553,8 +566,8 @@ class DetectionWidget(QObject):
         self.b_tracker = None
         self.f_tracker = None
 
-        #Object Detectorsw
-        self.face_obj = FastMTCNN() #TRY THIS FIRST
+        #Object Detectors
+        self.face_obj = FastMTCNN() 
         #self.body_obj = Yolov3()
         self.body_obj = Yolo_v4TINY()
 
@@ -653,6 +666,7 @@ class DetectionWidget(QObject):
 
     def body_tracker(self, frame):
         #ptvsd.debug_this_thread()
+        #TODO: Bug causing MTCNN running everytime the body_tracker is ON. Supposed to be only after a few frames to prevent lagging
         if self.b_tracker is None:
             #Detect Objects using YOLO every 1 second if No Body Tracker    
             boxes = []
@@ -741,8 +755,6 @@ class DetectionWidget(QObject):
         elif self.track_type == 2:
             #Body Only
             body_coords = self.body_tracker(frame)
-
-    
 
         try:
             x,y,w,h = face_coords
