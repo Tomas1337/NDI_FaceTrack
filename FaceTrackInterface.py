@@ -33,7 +33,6 @@ def handle_exception(exc_type, exc_value, exc_traceback):
     logger.error("Uncaught exception", exc_info=(exc_type, exc_value, exc_traceback))
 sys.excepthook = handle_exception
 
-
 #PySide2
 class MainWindow(QMainWindow):
     signalStatus = Signal(str)
@@ -325,9 +324,6 @@ class WindowGUI(QWidget):
         bottom_info_layout.addWidget(self.speed_label)
         bottom_info_layout.addWidget(self.fps_label)
         layout.addLayout(bottom_info_layout)
-
-    def callback(self):
-        print('helloautist')
 
     @Slot(str)
     def updateStatus(self, status):
@@ -706,7 +702,6 @@ class DetectionWidget(QObject):
 
     def body_tracker(self, frame):
         #ptvsd.debug_this_thread()
-        #TODO: Bug causing MTCNN running everytime the body_tracker is ON. Supposed to be only after a few frames to prevent lagging
         if self.b_tracker is None:
             #Detect Objects using YOLO every 1 second if No Body Tracker    
             boxes = []
@@ -1030,9 +1025,9 @@ def main(args_dict = None):
             logger.debug("UI is hidden")
     sys.exit(app.exec_())
 
+    #Removing Shortcut
     track_button_sc_prefix = CONFIG['shortcut']['track_button_sc_prefix']
     keybinder.unregister_hotkey(main.winId(),(f'{track_button_sc_prefix}+F')+ str(args['id']), self.face_track_button_click)
-
 
 if __name__ == '__main__':
     logger = add_logger()
