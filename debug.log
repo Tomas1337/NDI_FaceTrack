@@ -1,0 +1,4 @@
+2021-01-13 01:40:14,113 - tool.logging - DEBUG - {'name': None, 'enable_console': False, 'logging': True}
+2021-01-13 01:40:18,346 - tool.logging - ERROR - No name provided to connect to while UI is disabled. Exiting Application
+2021-01-13 02:24:01,881 - tool.logging - DEBUG - {'name': None, 'enable_console': False, 'logging': True}
+2021-01-13 02:24:15,997 - tool.logging - ERROR - No name provided to connect to while UI is disabled. Exiting Application

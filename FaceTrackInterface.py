@@ -1,31 +1,52 @@
-from PySide2.QtCore import QTextStream, QFile, QDateTime, QSize, Qt, QTimer,QRect, QThread, QObject, Signal, Slot, QRunnable
-from PySide2.QtWidgets import (QApplication, QCheckBox, QComboBox, QDateTimeEdit, QDial, QDialog, QGridLayout, QGroupBox, QHBoxLayout, QLabel, QBoxLayout, QProgressBar, QPushButton, QButtonGroup, QSlider, QStyleFactory, QTableWidget, QTabWidget, QTextEdit, QVBoxLayout, QWidget, QAbstractButton, QMainWindow, QAction, QMenu, QStyleOptionSlider, QStyle, QSpacerItem, QSizePolicy)
-from PySide2.QtGui import QImage, QPixmap, QPainter, QBrush, QFont, QPen, QPalette, QColor, QIcon
+from PySide2.QtCore import QTextStream, QFile, QDateTime, QSize, Qt, QTimer,QRect, QThread, QObject, Signal, Slot, QRunnable, QAbstractNativeEventFilter, QAbstractEventDispatcher
+from PySide2.QtWidgets import (QShortcut, QApplication, QCheckBox, QComboBox, QDateTimeEdit, QDial, QDialog, QGridLayout, QGroupBox, QHBoxLayout, QLabel, QBoxLayout, QProgressBar, QPushButton, QButtonGroup, QSlider, QStyleFactory, QTableWidget, QTabWidget, QTextEdit, QVBoxLayout, QWidget, QAbstractButton, QMainWindow, QAction, QMenu, QStyleOptionSlider, QStyle, QSpacerItem, QSizePolicy)
+from PySide2.QtGui import QKeySequence, QImage, QPixmap, QPainter, QBrush, QFont, QPen, QPalette, QColor, QIcon
 from face_tracking.objcenter import *
 from ndi_camera import ndi_camera
 import numpy as np
 import NDIlib as ndi
-import cv2, dlib, time, styling, sys, keyboard, argparse, threading
+import cv2, dlib, time, styling, sys, keyboard, argparse, threading, logging
 from tool.custom_widgets import *
+from tool.logging import add_logger
 from face_tracking.camera_control import *
 from config import CONFIG
+from tool.utils import str2bool
+from tool.pyqtkeybind import keybinder
 #from bg_matting import BG_Matt
-
 #import ptvsd
 
+
+class WinEventFilter(QAbstractNativeEventFilter):
+    def __init__(self, keybinder):
+        self.keybinder = keybinder
+        super().__init__()
+
+    def nativeEventFilter(self,eventType, message):
+        ret = self.keybinder.handler(eventType, message)
+        return ret, 0
+
+#Setup Logging
+def handle_exception(exc_type, exc_value, exc_traceback):
+    if issubclass(exc_type, KeyboardInterrupt):
+        sys.__excepthook__(exc_type, exc_value, exc_traceback)
+        return
+    logger.error("Uncaught exception", exc_info=(exc_type, exc_value, exc_traceback))
+sys.excepthook = handle_exception
+
+
+#PySide2
 class MainWindow(QMainWindow):
     signalStatus = Signal(str)
     track_type_signal = Signal(int)
     face_track_signal = Signal(np.ndarray)
     preset_camera_signal = Signal()
-
     def __init__(self, parent = None, args = None):
         super(MainWindow, self).__init__(parent)
         
         #Initialize the GUI object
         #Create a new worker thread
         self.args = args
-        self.gui = WindowGUI(self)
+        self.gui = WindowGUI(self, args)
         self.setCentralWidget(self.gui) 
         self.createThreads()
         self.createMenuBar()
@@ -33,13 +54,12 @@ class MainWindow(QMainWindow):
         #Make any cross object connections
         self._connectSignals()
         title = "NDI FaceTrack"
-        self.setWindowTitle(title) 
-        self.gui.show()
+        self.setWindowTitle(title)
         self.setFixedSize(700, 660)
-
-        if args is not None:
+        self.gui.show()
+        if args['name'] is not None:
             self.preset_camera_signal.emit()
-
+            
     def _connectSignals(self):
         self.signalStatus.connect(self.gui.updateStatus)
         self.track_type_signal.connect(self.face_detector.set_track_type)
@@ -58,9 +78,7 @@ class MainWindow(QMainWindow):
         entry.triggered.connect(self.vid_worker.stop_read_video)
         #Lamda function to connect the menu item with it's index
         entry.triggered.connect(lambda e=0, x=i: self.worker.connect_to_camera(x))
-
-        #entry.triggered.connect(self.worker.connect_to_camera(i))
-
+ 
     ### SIGNALS
     def createThreads(self):
         self.worker = WorkerObject(args = self.args)
@@ -72,7 +90,6 @@ class MainWindow(QMainWindow):
         self.vid_worker_thread = QThread()
         self.vid_worker.moveToThread(self.vid_worker_thread)
         
-
         self.face_detector = DetectionWidget()
         self.face_detector.moveToThread(self.vid_worker_thread)
         self.vid_worker_thread.start()
@@ -84,10 +101,12 @@ class MainWindow(QMainWindow):
         self.worker.ptz_list_signal.connect(self.populateSources)
         self.worker.info_status.connect(self.gui.updateInfo)
         self.worker.enable_controls_signal.connect(self.gui.enable_controls)
-        
+        self.worker.face_track_button_click.connect(self.gui.face_track_button_click)
+
         self.vid_worker.FaceFrameSignal.connect(self.face_track_signal_handler)
         self.vid_worker.DisplayNormalVideoSignal.connect(self.gui.setImage)
         self.vid_worker.FPSSignal.connect(self.gui.updateFPS)
+        self.vid_worker.TrackButtonShortcutSignal.connect(self.gui.face_track_button_click)
 
         self.face_detector.CameraZoomControlSignal.connect(self.vid_worker.zoom_camera_control)
         self.face_detector.DisplayVideoSignal.connect(self.gui.setImage)
@@ -111,7 +130,13 @@ class MainWindow(QMainWindow):
         self.gui.home_pos.mouseReleaseSignal.connect(self.face_detector.getTrackPosition)
 
         self.preset_camera_signal.connect(self.worker.connect_to_preset_camera)
-    
+        
+        
+        #self.gui.track_button_sc.activated.connect(self.gui.face_track_button_click)
+
+    def test(self):
+        print('heello there mr kenobi')
+
     def forceWorkerQuit(self):
         if self.worker_thread.isRunning():
             self.worker_thread.terminate()
@@ -123,7 +148,7 @@ class MainWindow(QMainWindow):
 
     def keyPressEvent(self, event):
         super(MainWindow, self).keyPressEvent(event)
-        print('pressed from MainWindow: ', event.key())
+        logger.debug(f'pressed from MainWindow: {event.key()}')
         key_dict = {49:0, 50:1, 51:2}
         try:
             self.track_type_signal.emit(key_dict[event.key()])
@@ -135,10 +160,14 @@ class MainWindow(QMainWindow):
         self.face_track_signal.emit(frame)
 
 class WindowGUI(QWidget):
-    def __init__(self, parent):
+    def __init__(self, parent, args):
         super(WindowGUI, self).__init__(parent)
         self.label_status = QLabel('Created by: JTJTi Digital Video + Radio', self)
         
+        #GLOBAL SHORTCUT#
+        track_button_sc_prefix = CONFIG['shortcut']['track_button_sc_prefix']
+        keybinder.register_hotkey(parent.winId(),(f'{track_button_sc_prefix}+F')+ str(args['id']), self.face_track_button_click)
+
         #Main Track Button
         self.face_track_button = QTrackingButton('TRACK')
         self.face_track_button.setCheckable(True)
@@ -152,7 +181,6 @@ class WindowGUI(QWidget):
         self.video_frame.setStyleSheet("background-color:#000000;")
         self.video_frame.setAlignment(Qt.AlignCenter)
         self.video_frame.setMargin(10)
-
 
         #Home Position Draggable
         self.home_pos = GraphicView(self.video_frame)
@@ -298,6 +326,9 @@ class WindowGUI(QWidget):
         bottom_info_layout.addWidget(self.fps_label)
         layout.addLayout(bottom_info_layout)
 
+    def callback(self):
+        print('helloautist')
+
     @Slot(str)
     def updateStatus(self, status):
         self.label_status.setText(status)
@@ -317,6 +348,10 @@ class WindowGUI(QWidget):
     @Slot(str)
     def updateInfo(self, status):
         self.info_panel.setText(status)
+
+    @Slot()
+    def face_track_button_click(self):
+        self.face_track_button.click()
         
     @Slot(QImage)
     def setImage(self, image):
@@ -334,6 +369,7 @@ class WindowGUI(QWidget):
         self.y_enable_button.setEnabled(True)
         self.azoom_lost_face_button.setEnabled(True)
         self.zoom_slider.setEnabled(True)
+        
 
 class WorkerObject(QObject):
     """
@@ -344,6 +380,7 @@ class WorkerObject(QObject):
     ptz_object_signal = Signal(object)
     info_status = Signal(str)
     enable_controls_signal = Signal()
+    face_track_button_click = Signal()
 
     def __init__(self, parent=None, args = None):
         super(self.__class__, self).__init__(parent)
@@ -379,6 +416,8 @@ class WorkerObject(QObject):
         self.ptz_object_signal.emit(ndi_recv)
         self.info_status.emit(f'Signal: {name}')
         self.enable_controls_signal.emit()
+        self.face_track_button_click.emit()
+        
 
 #Handles the reading and displayingg of video
 class Video_Object(QObject):
@@ -390,6 +429,7 @@ class Video_Object(QObject):
     PixMapSignal = Signal(QImage)
     FaceFrameSignal = Signal(np.ndarray)
     DisplayNormalVideoSignal = Signal(QImage)
+    TrackButtonShortcutSignal = Signal()
     FPSSignal = Signal(float)
     
     def __init__(self,parent=None):
@@ -423,7 +463,7 @@ class Video_Object(QObject):
                 frame = v.data
                 frame = frame[:,:,:3]
                 if (frame.shape[0] != FRAME_HEIGHT) or (frame.shape[1] != FRAME_WIDTH):
-                    warnings.warn(f'Original frame size is:{frame.shape}')
+                    logger.warning(f'Frame is not within recommended dimensions:{frame.shape}. Resizing to ({FRAME_WIDTH}, {FRAME_HEIGHT})')
                 resize_frame_shape = (640,360)
                 frame = cv2.resize(frame, resize_frame_shape)
 
@@ -433,6 +473,7 @@ class Video_Object(QObject):
                 camera_move_speed = CONFIG.getfloat('camera_control', 'camera_move_speed')
                 camera_zoom_speed = CONFIG.getfloat('camera_control', 'camera_zoom_speed')
 
+                #TODO Can we please make this a function
                 if keyboard.is_pressed('e') and not self.keypress:
                     self.zoom_camera_control(camera_zoom_speed)
                     self.keypress=True
@@ -469,6 +510,9 @@ class Video_Object(QObject):
                 elif self.keypress and not keyboard.is_pressed('d'):
                     self.keypress = False
                     self.camera_control(0.0,0.0)
+                # elif keyboard.is_pressed('t') and not self.keypress:
+                #     self.TrackButtonShortcutSignal.emit()
+                #     self.keypress=False
 
                 if self.face_track_state == False:
                     self.display_plain_video(frame)
@@ -509,7 +553,7 @@ class Video_Object(QObject):
         self.DisplayNormalVideoSignal.emit(image)
 
     @Slot(float, float)
-    def camera_control(self, Xspeed, Yspeed):
+    def camera_control(self, Xspeed, Yspeed):   
         """
         Function to send out the X-Y Vectors to the camera directly
         The loop helps the control of how many times the vectors are sent in one call
@@ -522,6 +566,7 @@ class Video_Object(QObject):
         for i in range(1,2):
             ndi.recv_ptz_pan_tilt_speed(self.ndi_recv, Xspeed, Yspeed)
         #ndi.recv_ptz_pan_tilt_speed(self.ndi_recv, 0, 0)
+        #print(f'Camera Control X:{Xspeed}  Y:{Yspeed}')
 
     @Slot(float)
     def zoom_camera_control(self, ZoomValue):
@@ -537,6 +582,7 @@ class DetectionWidget(QObject):
     CameraZoomControlSignal = Signal(float)
     signalStatus = Signal(str)
     info_status = Signal(str)
+
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -601,11 +647,10 @@ class DetectionWidget(QObject):
             ok, position = self.f_tracker.update(frame)
             #print("Face Tracker update takes:{:.2f}s".format(time.time() - tic))
             if self.frame_count % 300== 0:
-                print('Running a {}s check'.format(300/30))
+                logger.debug(f'Running a {(300/30)}s check')
                 test_coords = self.face_obj.get_all_locations(frame)
 
                 if len(test_coords) > 0: #There are detections
-                    print('testing here')
                     for i, j in enumerate(test_coords):
                         if self.overlap_metric(j, self.face_coords) >= 0.75:
                             x,y,w,h = j
@@ -613,7 +658,6 @@ class DetectionWidget(QObject):
                     return []
 
                 else: #No detections
-                    print('testing here 2')
                     self.f_tracker = None
                     return []
             
@@ -629,7 +673,7 @@ class DetectionWidget(QObject):
                 
             else:
                 if self.f_track_count > 5:
-                    print('Lost face') 
+                    logger.debug('Lost face') 
                     self.info_status.emit('Refreshing Face Detector')     
                     self.f_tracker = None
                     return []
@@ -642,7 +686,7 @@ class DetectionWidget(QObject):
             Detect a face inside the body Coordinates
             If no detections in the body frame, detect on whole frame which gets the face detection with the strongest confidence
             """
-            if self.frame_count % 1 == 0:
+            if self.frame_count % 20 == 0:
                 face_coords = self.face_obj.update(frame)
             else:
                 face_coords = []
@@ -655,7 +699,7 @@ class DetectionWidget(QObject):
             #Start a face tracker
             self.f_tracker = cv2.TrackerCSRT_create()
             self.f_tracker.init(frame, (x,y,w,h))
-            print('Initiating a face tracker')
+            logger.debug('Initiating a face tracker')
 
         self.face_coords = x,y,w,h
         return x,y,w,h
@@ -668,7 +712,7 @@ class DetectionWidget(QObject):
             boxes = []
             if self.frame_count % 15 == 0:
                 (idxs, boxes, _, _, classIDs, confidences) = self.body_obj.update(frame)
-                print('Running a YOLO')
+                logger.debug('Running a YOLO')
 
             if len(boxes) <= 0:
                 return []
@@ -711,7 +755,7 @@ class DetectionWidget(QObject):
                 x,y,w,h = [0 if i < 0 else i for i in [x,y,w,h]]
 
             else:
-                print('Tracking Fail')
+                logger.debug('Tracking Fail')
                 return []
         
             cv2.rectangle(frame, (x,y), (x+w,y+h), (255,255,255), 2)
@@ -720,8 +764,12 @@ class DetectionWidget(QObject):
     @Slot(np.ndarray)
     def main_track(self, frame):
         """
-        Takes in a list where the first element is the frame
-        The second element are the target coordinates of the tracker
+        Begins main tracking module.
+        Handles descision between face or body Tracking
+        Handles sending commands to camera
+
+        Args:
+            frame (np.ndarray): Frame to track
         """
         self.track_coords = []
         self.set_focal_length(self.ZoomValue)
@@ -755,12 +803,12 @@ class DetectionWidget(QObject):
         try:
             x,y,w,h = face_coords
             self.track_coords = [x,y,x+w,y+h]
-            #self.info_status.emit('Tracking Face')
+            self.info_status.emit('Tracking Face')
         except (ValueError, TypeError, UnboundLocalError) as e:
             try:
                 x,y,w,h = body_coords
                 self.track_coords = [x,y,x+w,y+h]
-                #self.info_status.emit('Tracking Body')
+                self.info_status.emit('Tracking Body')
                 self.overlap_counter = 0
             except (ValueError, UnboundLocalError) as e:
                 pass
@@ -786,14 +834,14 @@ class DetectionWidget(QObject):
                 objX = self.last_loc[0]
                 objY = self.last_loc[1]
                 self.lost_tracking += 1
-                print('Lost tracking. Going to last known location of object')
+                logger.debug('Lost tracking. Going to last known location of object')
                 self.info_status.emit("Lost Tracking Sequence Initial")
                 #self.CameraZoomControlSignal.emit(0.0)
 
             else:
                 objX = centerX
                 objY = centerY
-                print('Lost object. Centering')
+                logger.debug('Lost object. Centering')
                 self.info_status.emit("Lost Object. Recenter subject")
                 self.lost_tracking += 1
                 #self.CameraZoomControlSignal.emit(0.0)
@@ -862,7 +910,7 @@ class DetectionWidget(QObject):
     def overlap_metric(self, boxA, boxB):
         # determine the (x, y)-coordinates of the intersection rectangle
         # BoxA and BoxB usually comes in x,y,w,h
-        # Tranlate into x,y,x1,y1
+        # Translate into x,y,x1,y1
         def _translate(box):
             x,y,w,h = box
             x1 = x+w
@@ -944,20 +992,48 @@ class DetectionWidget(QObject):
 def main(args_dict = None):
     parser = argparse.ArgumentParser(description='Argument Parsing NDI_FaceTrack')
     parser.add_argument('-n', '--name', default = None, help = "Provide the Name of the Camera to connect to Format: NameXXX (DeviceXXX)")
+    parser.add_argument('-c', '--enable_console', type = str2bool, default = True, help = "Gives option to enable/disable the UI. This is useful for allowing users to just use the base tracking module. Must have --name argument")
+    parser.add_argument('-l', '--logging', default = False, type = str2bool, help = "Generates a txt file for logging")
+    parser.add_argument('-i', '--id', type = int, default = 1, help="Gives the instance an numerical ID. Used for shortcut assignment e.g. CTRL+1 will disable/enable Tracking on Application with ID-1")
     args = parser.parse_args()
-    args_dict = vars(args)
-    print(args_dict)
 
+    keybinder.init()
+
+    if args.logging is False:
+        logging.disable(logging.CRITICAL)
+        
+    args_dict = vars(args)
+    logger.debug(args_dict)
     app = QApplication(sys.argv)
     style_name = "styling/dark.qss"
     style_path = os.path.abspath(os.path.dirname(__file__))
-    style_file = QFile(os.path.join(style_path,style_name))
+    style_file = QFile(os.path.join(style_path,style_name)) 
     style_file.open(QFile.ReadOnly | QFile.Text)
     stream = QTextStream(style_file)
     app.setStyleSheet(stream.readAll())
     main = MainWindow(args = args_dict)
-    main.show()
+
+    # Install a native event filter to receive events from the OS
+    win_event_filter = WinEventFilter(keybinder)
+    event_dispatcher = QAbstractEventDispatcher.instance()
+    event_dispatcher.installNativeEventFilter(win_event_filter)
+
+    if args.enable_console is True:
+        main.show()
+    else:
+        if args.name is None:
+            dialog = DialogBox()
+            dialog(text= "Cannot continue", info_text="Please provide --name to continue when disabling UI")
+            logger.error("No name provided to connect to while UI is disabled. Exiting Application")
+            exit()
+        else:
+            logger.debug("UI is hidden")
     sys.exit(app.exec_())
 
+    track_button_sc_prefix = CONFIG['shortcut']['track_button_sc_prefix']
+    keybinder.unregister_hotkey(main.winId(),(f'{track_button_sc_prefix}+F')+ str(args['id']), self.face_track_button_click)
+
+
 if __name__ == '__main__':
+    logger = add_logger()
     main()

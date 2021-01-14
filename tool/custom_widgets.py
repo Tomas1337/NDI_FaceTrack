@@ -2,7 +2,7 @@ __author__ = "Tomas Lastrilla"
 __version__ = "0.1.1"
 
 from PySide2.QtCore import QSize, Qt, QMimeData, QPointF, Signal
-from PySide2.QtWidgets import QGraphicsTextItem, QGridLayout, QPushButton, QSizePolicy, QLabel, QVBoxLayout, QWidget, QApplication, QGraphicsView, QGraphicsScene, QGraphicsEllipseItem
+from PySide2.QtWidgets import QMessageBox, QGraphicsTextItem, QGridLayout, QPushButton, QSizePolicy, QLabel, QVBoxLayout, QWidget, QApplication, QGraphicsView, QGraphicsScene, QGraphicsEllipseItem
 from PySide2.QtGui import QPainter, QColor, QFont, QIcon, QDrag, QPixmap
 import sys
 
@@ -10,7 +10,7 @@ import sys
 class QResetButton(QPushButton):
     def __init__(self, parent = None):
         super(QResetButton, self).__init__(parent)
-        self.setText('RESET TRACKER')
+        self.setText('&RESET TRACKER')
         self.setFont(QFont("Open Sans", 19, QFont.Bold))
         self.setStyleSheet("QPushButton {background-color:#b45f06; border-radius: 10px; color: #e6d7c8;} QPushButton:disabled {background-color:#444444;}")
 
@@ -56,7 +56,6 @@ class QTrackingButton(QPushButton):
         super(QTrackingButton, self).__init__(parent)
         self.setFont(QFont("Open Sans", 19, QFont.Bold))
         self.setStyleSheet("QPushButton {background-color:#38761d; border-radius: 10px; color: #e6d7c8;} QPushButton:disabled {background-color:#444444;} QPushButton:checked {background-color:#6aa84f;} QPushButton:checked:disabled {background-color:#999999;}")
-
 
 class MovingObject(QGraphicsTextItem):
     mouseReleaseSignal = Signal(int, int)
@@ -149,3 +148,36 @@ class GraphicView(QGraphicsView):
     def mouseReleaseEvent(self, e):
         (center_x, center_y) = self.moveObject._getPosition()
         self.mouseReleaseSignal.emit(center_x, center_y)
+
+class DialogBox(): 
+    def __init__(self, mode = "info", text=None):
+        msg = QMessageBox()
+        msg.setWindowTitle("Error Encountered")
+        if mode == 'info':
+            msg.setIcon(QMessageBox.Information)
+            msg.setInformativeText("General Information Error 0")
+        elif mode == 'warning':
+            msg.setIcon(QMessageBox.Warning)
+            msg.setInformativeText("General Warning Error 0")
+        elif mode == 'critical':
+            msg.setIcon(QMessageBox.Critical)
+            msg.setInformativeText("Critical Error 0")
+
+        if text is None:
+            msg.setText("Error")
+            
+        
+        msg.setStandardButtons(QMessageBox.Ok)
+
+        self.msg = msg
+
+    def __call__(self, text=None, info_text=None):
+        if text is not None:
+            self.msg.setText(text)
+
+        if info_text is not None:
+            self.msg.setInformativeText(info_text)
+        self.msg.exec_()
+
+    def set_detailed_text(self, detailed_text):
+        self.msg.setDetailedText(detailed_text)

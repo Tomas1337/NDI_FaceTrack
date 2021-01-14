@@ -2,7 +2,7 @@ import time, cv2, os, imutils
 import numpy as np
 from facenet_pytorch import MTCNN
 from imutils.object_detection import non_max_suppression
-import ptvsd
+#import ptvsd
 CURR_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),".."))
 
 class FastMTCNN(object):
@@ -154,13 +154,16 @@ class Yolo_v4TINY(object):
         configPath = os.path.join(CURR_PATH, "models\yolov4-tiny.cfg")
         self.LABELS = open(labelsPath).read().strip().split("\n")
         self.net = cv2.dnn.readNet(weightsPath, configPath)
-        self.net.setPreferableBackend(cv2.dnn.DNN_BACKEND_CUDA)
-        self.net.setPreferableTarget(cv2.dnn.DNN_TARGET_CUDA_FP16)
+        # self.net.setPreferableBackend(cv2.dnn.DNN_BACKEND_CUDA)
+        # self.net.setPreferableTarget(cv2.dnn.DNN_TARGET_CUDA_FP16)
         self.model = cv2.dnn_DetectionModel(self.net)
         self.model.setInputParams(size=(416, 416), scale=1/255)
 
     def update(self, frames, minConf = 0.4, threshold = 0.5):
-        ptvsd.debug_this_thread()
+        """TODO
+        Fix the class parser. It's ugly right now
+        """
+        #ptvsd.debug_this_thread()
         idxs = []
         self.boxes = []
         self.confidences = []
@@ -170,20 +173,23 @@ class Yolo_v4TINY(object):
 
         if len(classIDs) > 0:
             mask = classIDs == 0
-            curr_score = 0
-            for index, p in enumerate(mask):
-                if p == True and scores[index] >= curr_score:
-                    curr_score = scores[index]
-                    top = index
-                    self.confidences.append(curr_score)
-            box = boxes[top]
-            (X, Y, width, height) = box.astype("int")
+            if True in mask.squeeze():
+                curr_score = 0
+                for index, p in enumerate(mask):
+                    if p == True and scores[index] >= curr_score:
+                        curr_score = scores[index]
+                        top = index
+                        self.confidences.append(curr_score)
+                box = boxes[top]
+                (X, Y, width, height) = box.astype("int")
 
-            #self.classIDs.append(classIDs)
-            self.boxes.append([int(X), int(Y), int(width), int(height)])
-            #self.detections.append([x,y,x+width,y+height,scores])
-            #idxs = cv2.dnn.NMSBoxes(self.boxes, self.confidences, minConf, threshold)
-            return None, self.boxes, None, None, None,self.confidences
+                #self.classIDs.append(classIDs)
+                self.boxes.append([int(X), int(Y), int(width), int(height)])
+                #self.detections.append([x,y,x+width,y+height,scores])
+                #idxs = cv2.dnn.NMSBoxes(self.boxes, self.confidences, minConf, threshold)
+                return None, self.boxes, None, None, None,self.confidences
+            else:
+                return None, [], None, None, None, None
         else:
             return None, [], None, None, None, None
 

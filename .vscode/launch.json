@@ -11,8 +11,7 @@
             "request": "launch",
             "program": "FaceTrackInterface.py",
             "console": "integratedTerminal",
-            "args": ["--name","DESKTOP-C16VMFB (VLC)"],
-            //"args" : ["DESKTOP-C16VMFB (VLC)"],
+            "args": ["--name","DESKTOP-C16VMFB (VLC)"], 
             "python": "${command:python.interpreterPath}"
             
         },
@@ -23,6 +22,28 @@
             "program": "FaceTrackInterface.py",
             "console": "integratedTerminal",
             "python": "${command:python.interpreterPath}"
-        }
+        },
+        {
+            "name": "Hidden UI",
+            "type": "python",
+            "request": "launch",
+            "program": "FaceTrackInterface.py",
+            "console": "integratedTerminal",
+            "args": ["--name","DESKTOP-C16VMFB (VLC)","--enable_console", "False"], 
+            //"args": ["--enable_console", "False"], 
+            "python": "${command:python.interpreterPath}"
+            
+        },
+        {
+            "name": "Logging Test",
+            "type": "python",
+            "request": "launch",
+            "program": "FaceTrackInterface.py",
+            "console": "integratedTerminal",
+            "args": ["--name","DESKTOP-C16VMFB (VLC)","--enable_console", "True", "--logging", "True"], 
+            //"args": ["--enable_console", "False", "--logging", "True"], 
+            "python": "${command:python.interpreterPath}"
+            
+        },
     ]
 }
