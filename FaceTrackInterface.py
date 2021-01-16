@@ -5,7 +5,7 @@ from face_tracking.objcenter import *
 from ndi_camera import ndi_camera
 import numpy as np
 import NDIlib as ndi
-import cv2, dlib, time, styling, sys, keyboard, argparse, threading, logging
+import cv2, time, styling, sys, keyboard, argparse, threading, logging
 from tool.custom_widgets import *
 from tool.logging import add_logger
 from face_tracking.camera_control import *
@@ -14,7 +14,6 @@ from tool.utils import str2bool
 from tool.pyqtkeybind import keybinder
 #from bg_matting import BG_Matt
 #import ptvsd
-
 
 class WinEventFilter(QAbstractNativeEventFilter):
     def __init__(self, keybinder):
@@ -132,9 +131,6 @@ class MainWindow(QMainWindow):
         
         
         #self.gui.track_button_sc.activated.connect(self.gui.face_track_button_click)
-
-    def test(self):
-        print('heello there mr kenobi')
 
     def forceWorkerQuit(self):
         if self.worker_thread.isRunning():
@@ -993,7 +989,7 @@ def main(args_dict = None):
     args = parser.parse_args()
 
     keybinder.init()
-
+    
     if args.logging is False:
         logging.disable(logging.CRITICAL)
         
@@ -1029,6 +1025,8 @@ def main(args_dict = None):
     track_button_sc_prefix = CONFIG['shortcut']['track_button_sc_prefix']
     keybinder.unregister_hotkey(main.winId(),(f'{track_button_sc_prefix}+F')+ str(args['id']), self.face_track_button_click)
 
+
+logger = add_logger()
 if __name__ == '__main__':
-    logger = add_logger()
-    main()
+    
+    main(logger)

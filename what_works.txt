@@ -1,4 +1,10 @@
 
+##01/17
+1. Build using venv_0116
+	python3.8
+	Add: modified torchvision (of 0715)*
+
+
 ##12/02
 1. Build using venv_1202
 	Add: facenet_pytorch

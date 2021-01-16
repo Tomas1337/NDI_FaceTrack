@@ -1,7 +1,8 @@
-import time, cv2, os, imutils
+import time, cv2, os
 import numpy as np
 from facenet_pytorch import MTCNN
-from imutils.object_detection import non_max_suppression
+
+#from imutils.object_detection import non_max_suppression
 #import ptvsd
 CURR_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),".."))
 
