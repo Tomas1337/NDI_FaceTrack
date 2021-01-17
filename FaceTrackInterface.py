@@ -161,7 +161,7 @@ class WindowGUI(QWidget):
         
         #GLOBAL SHORTCUT#
         track_button_sc_prefix = CONFIG['shortcut']['track_button_sc_prefix']
-        keybinder.register_hotkey(parent.winId(),(f'{track_button_sc_prefix}+F')+ str(args['id']), self.face_track_button_click)
+        keybinder.register_hotkey(parent.winId(),(f'{track_button_sc_prefix}+')+ str(args['id']), self.face_track_button_click)
 
         #Main Track Button
         self.face_track_button = QTrackingButton('TRACK')

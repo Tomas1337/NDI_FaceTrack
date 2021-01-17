@@ -11,7 +11,7 @@
             "request": "launch",
             "program": "FaceTrackInterface.py",
             "console": "integratedTerminal",
-            "args": ["--name","DESKTOP-C16VMFB (VLC)"], 
+            "args": ["--name","DESKTOP-C16VMFB (VLC)","--id", "2"], 
             "python": "${command:python.interpreterPath}"
             
         },
