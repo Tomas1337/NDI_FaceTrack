@@ -2,7 +2,8 @@
 ##01/17
 1. Build using venv_0116
 	python3.8
-	Add: modified torchvision (of 0715)*
+	Add: modified torchvision (of 0715)* (overwrite no)
+	Remove Torch models in lib:
 
 
 ##12/02

@@ -1,0 +1,6 @@
+site_name: NDI Face Track
+nav:
+  - Home: index.md
+  - Getting Started: getting_started.md
+
+theme: readthedocs

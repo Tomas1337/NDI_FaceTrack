@@ -1019,6 +1019,16 @@ def main(args_dict = None):
             exit()
         else:
             logger.debug("UI is hidden")
+
+    if type(args.id) is not int:
+        dialog = DialogBox()
+        dialog(text= "Cannot continue", info_text="ID needs variable of type int")
+        exit()
+    else:
+        pass
+
+
+
     sys.exit(app.exec_())
 
     #Removing Shortcut
