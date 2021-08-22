@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import time
 
 from .backbones import SUPPORTED_BACKBONES
 
@@ -229,10 +230,22 @@ class MODNet(nn.Module):
             self.backbone.load_pretrained_ckpt()                
 
     def forward(self, img, inference):
-        pred_semantic, lr8x, [enc2x, enc4x] = self.lr_branch(img, inference)
-        pred_detail, hr2x = self.hr_branch(img, enc2x, enc4x, lr8x, inference)
-        pred_matte = self.f_branch(img, lr8x, hr2x)
+        tic = time.time()
 
+        tic_lr = time.time()
+        pred_semantic, lr8x, [enc2x, enc4x] = self.lr_branch(img, inference)
+        print("Modnet LR Branch forward takes:{:.2f}s".format(time.time() - tic_lr))
+
+        tic_hr = time.time()
+        pred_detail, hr2x = self.hr_branch(img, enc2x, enc4x, lr8x, inference)
+        print("Modnet HR Branch forward takes:{:.2f}s".format(time.time() - tic_hr))
+
+        tic_f_branch = time.time()
+        pred_matte = self.f_branch(img, lr8x, hr2x)
+        print("Modnet F Branch forward takes:{:.2f}s".format(time.time() - tic_f_branch))
+        
+        
+        print("Modnet Entire forward takes:{:.2f}s".format(time.time() - tic))
         return pred_semantic, pred_detail, pred_matte
     
     def freeze_norm(self):

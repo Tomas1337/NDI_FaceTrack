@@ -1,9 +1,73 @@
+##03/31
+
+1. Build using venv_flask
+	python 3.8
+	Add modified torchivision
+	Add modified facenet_pytorch
+
+<<<<<<< HEAD
+##01/27
+1. Build using venv_0126
+	python3.8
+	Add: modified torchvision (of 0715)*
+	Remove Torch models in lib:
+
+	pip install -r requirements.txt
+	torch==1.6.0+cpu
+	torchvision==0.7.0+cpu
+	facenet-pytorch==2.5.1
+=======
+	From torch.lib
+	Remove: caffe2_detectron_ops.dll
+	Remove: caffe2_detectron_ops.lib
+
+##01/27
+1. Build using venv_0126
+	python3.8
+	Add: modified torchvision (of 0715)*
+	Remove Torch models in lib:
+>>>>>>> development
+
+	pip install -r requirements.txt
+	torch==1.6.0+cpu
+	torchvision==0.7.0+cpu
+	facenet-pytorch==2.5.1
 
 ##01/17
 1. Build using venv_0116
 	python3.8
 	Add: modified torchvision (of 0715)* (overwrite no)
 	Remove Torch models in lib:
+
+	pip install -r requirements.txt
+	torch==1.6.0+cpu
+	torchvision==0.7.0+cpu
+	facenet-pytorch==2.5.1
+
+
+##12/02
+1. Build using venv_1202
+	Add: facenet_pytorch
+	Add: modified torchvision (of 0715)*
+	Add: torch_python.dll*
+	*torch with torch.jit._script_if_tracing
+	*torchvision with torch.jit._script_if_tracing
+
+	The changes are @torch.jit.script to torch.jit._script_if_tracing in torch and torchvision
+	Add the torch.jit._script_if_tracing method
+
+	*torch version that works with python 3.7 are torch=1.3.1 and torchvision=0.4.2
+
+##01/17
+1. Build using venv_0116
+	python3.8
+	Add: modified torchvision (of 0715)* (overwrite no)
+	Remove Torch models in lib:
+
+	pip install -r requirements.txt
+	torch==1.6.0+cpu
+	torchvision==0.7.0+cpu
+	facenet-pytorch==2.5.1
 
 
 ##12/02
@@ -54,6 +118,3 @@
 	Use: Work_env scipy
 	Use: Work_env cv2
 	Add: facenet_pytorch
-
-
-

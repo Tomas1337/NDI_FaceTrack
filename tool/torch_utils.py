@@ -10,8 +10,8 @@ from torch.autograd import Variable
 import itertools
 import struct  # get_image_size
 import imghdr  # get_image_size
-
-from tool import utils 
+sys.path.insert(0, 'tool/')
+import utils 
 
 
 def bbox_ious(boxes1, boxes2, x1y1x2y2=True):

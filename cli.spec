@@ -7,7 +7,7 @@ import torch
 block_cipher = None
 
 a = Analysis(['cli.py'],
-             pathex=['C:\\Program Files (x86)\\Windows Kits\\10\\Redist\\10.0.18362.0\\ucrt\\DLLs\\x64','C:\\Projects\\NDI_FaceTrack_v1\\NDI_FaceTrack'],
+             pathex=['C:\\Program Files (x86)\\Windows Kits\\10\\Redist\\10.0.18362.0\\ucrt\\DLLs\\x64','C:\\Projects\\NDI_FaceTrack'],
              binaries=[('Processing.NDI.Lib.x64.dll', '.')],
              datas=[('models', 'models'),('styling','styling'),('config.ini','.'),('config.py','.'),('facenet_pytorch','facenet_pytorch')],
              hiddenimports=['pkg_resources.py2_warn','cv2', 'scipy', 'keyboard'],

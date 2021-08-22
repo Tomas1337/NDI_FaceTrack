@@ -1,0 +1,17 @@
+image: python:3.8-buster ## MkDocs requies python.
+
+pages:
+  stage: deploy ## tell GitLab to deploy the website in this step.
+  before_script:
+    - pip install mkdocs ## install MkDocs.
+    - pip install mkdocs-material ## install the theme.
+  script:
+    - cd ./src/mkdocs
+    - mkdocs build ## built the site.
+    - mv site ../../public
+  artifacts:
+    paths:
+    - public
+  ## Uncomment the following section if you want to run this step under master branch only.
+  only:
+    - master 

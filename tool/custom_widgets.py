@@ -2,7 +2,11 @@ __author__ = "Tomas Lastrilla"
 __version__ = "0.1.1"
 
 from PySide2.QtCore import QSize, Qt, QMimeData, QPointF, Signal
+<<<<<<< HEAD
 from PySide2.QtWidgets import QMessageBox, QGraphicsTextItem, QGridLayout, QPushButton, QSizePolicy, QLabel, QVBoxLayout, QWidget, QApplication, QGraphicsView, QGraphicsScene, QGraphicsEllipseItem
+=======
+from PySide2.QtWidgets import QGraphicsTextItem, QGridLayout, QPushButton, QMessageBox, QSizePolicy, QLabel, QVBoxLayout, QWidget, QApplication, QGraphicsView, QGraphicsScene, QGraphicsEllipseItem
+>>>>>>> development
 from PySide2.QtGui import QPainter, QColor, QFont, QIcon, QDrag, QPixmap
 import sys
 
@@ -10,7 +14,7 @@ import sys
 class QResetButton(QPushButton):
     def __init__(self, parent = None):
         super(QResetButton, self).__init__(parent)
-        self.setText('&RESET TRACKER')
+        self.setText('RESET TRACKER')
         self.setFont(QFont("Open Sans", 19, QFont.Bold))
         self.setStyleSheet("QPushButton {background-color:#b45f06; border-radius: 10px; color: #e6d7c8;} QPushButton:disabled {background-color:#444444;}")
 
@@ -88,6 +92,40 @@ class MovingObject(QGraphicsTextItem):
  
         orig_position = self.scenePos()
 
+<<<<<<< HEAD
+=======
+class MovingObject(QGraphicsTextItem):
+    mouseReleaseSignal = Signal(int, int)
+    def __init__(self, x ,y, scene_width, scene_height):
+        super().__init__()
+        self.setAcceptHoverEvents(True)
+        self.setPlainText("+")
+        self.setDefaultTextColor(Qt.red)
+        self.setFont(QFont("Arial", 35))
+        self.setTextWidth(10)
+        self.bounding_width = self.boundingRect().width()
+        self.bounding_height = self.boundingRect().height()
+        self.setfromCenter(x, y)
+
+        self.width = scene_width
+        self.height = scene_height
+
+    def setfromCenter(self, x, y):
+        x -= int(self.bounding_width/2)
+        y -= int(self.bounding_height/2)
+        self.setPos(x,y)
+
+    # mouse click event
+    def mousePressEvent(self, event):
+        pass
+ 
+    def mouseMoveEvent(self, event):
+        orig_cursor_position = event.lastScenePos()
+        updated_cursor_position = event.scenePos()
+ 
+        orig_position = self.scenePos()
+
+>>>>>>> development
         updated_cursor_x = updated_cursor_position.x() - orig_cursor_position.x() + orig_position.x()
         updated_cursor_y = updated_cursor_position.y() - orig_cursor_position.y() + orig_position.y()
         
@@ -149,6 +187,7 @@ class GraphicView(QGraphicsView):
         (center_x, center_y) = self.moveObject._getPosition()
         self.mouseReleaseSignal.emit(center_x, center_y)
 
+<<<<<<< HEAD
 class DialogBox(): 
     def __init__(self, mode = "info", text=None):
         msg = QMessageBox()
@@ -181,3 +220,15 @@ class DialogBox():
 
     def set_detailed_text(self, detailed_text):
         self.msg.setDetailedText(detailed_text)
+=======
+def DialogBox():
+   msgBox = QMessageBox()
+   msgBox.setIcon(QMessageBox.Critical)
+   msgBox.setText("Please start the NDI_FaceTrack.exe server before launching GUI")
+   msgBox.setWindowTitle("Launch Error")
+   msgBox.setStandardButtons(QMessageBox.Ok)
+
+   returnValue = msgBox.exec()
+   if returnValue == QMessageBox.Ok:
+       print('OK clicked')
+>>>>>>> development

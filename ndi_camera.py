@@ -1,8 +1,9 @@
 import sys
 import numpy as np
 import cv2 as cv
-import NDIlib as ndi
 import time
+import NDIlib as ndi
+
 class ndi_camera:
     def __init__(self):
         #ptvsd.debug_this_thread()
@@ -71,7 +72,6 @@ class ndi_camera:
             print(f'NDI Address: {self.sources[0].url_address}')
 
         elif ndi_name is not None:
-            
             ndi_recv = self.create_ndi_recv_object()
             ndi_source = self.create_ndi_source_preset(ndi_name)
             ndi.recv_connect(ndi_recv, ndi_source)

@@ -35,6 +35,9 @@ def keys_from_string(keys):
             keys = _get_virtual_key(qtkeys)
     except ValueError:
         keys = _get_virtual_key(qtkeys)
+    except IndexError:
+        keys = KeyTbl.index(qtkeys)
+
 
     return mods, keys
 

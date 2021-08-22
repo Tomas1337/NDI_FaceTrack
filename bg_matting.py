@@ -5,7 +5,7 @@ from PIL import Image
 import torch
 import torch.nn as nn
 import torchvision.transforms as transforms
-
+import ptvsd
 from models.modnet import MODNet
 
 torch_transforms = transforms.Compose(
@@ -15,10 +15,10 @@ torch_transforms = transforms.Compose(
     ]
 )
 
-
-class BG_Matt(object):
+class BG_Matt():
     def __init__(self):
-        pretrained_ckpt = 'models/modnet_webcam_portrait_matting.ckpt'
+        #pretrained_ckpt = 'models/modnet_webcam_portrait_matting.ckpt' #1.3s
+        pretrained_ckpt = 'models/modnet_photographic_portrait_matting.ckpt' #1.3s
         self.modnet = MODNet(backbone_pretrained=False)
         self.modnet = nn.DataParallel(self.modnet)
 
@@ -34,6 +34,7 @@ class BG_Matt(object):
         self.modnet.eval()
 
     def predict(self, frame):
+        ptvsd.debug_this_thread()
         frame_np = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         frame_np = cv2.resize(frame_np, (910, 512), cv2.INTER_AREA)
         frame_np = frame_np[:, 120:792, :]

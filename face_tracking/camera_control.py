@@ -4,11 +4,13 @@ import time
 class PTZ_Controller_Novel():
 
     def __init__(self, focal_length = 129, gamma=0.4):
-        #Focal Length of a BirdDog P200 is 4.3 to 129mm
-        #129mm being the most zoomed out
-        #X-axis Speed = 100 deg/s
-        #Y-axis Speed = 50 deg/s
-        #Pixel size = 89.75 micrometers or 0.08975mm
+        """     
+        Focal Length of a BirdDog P200 is 4.3 to 129mm
+        129mm being the most zoomed out
+        X-axis Speed = 100 deg/s
+        Y-axis Speed = 50 deg/s
+        Pixel size = 89.75 micrometers or 0.08975mm
+        """
 
         self.pix_s = 0.08975
         self.theta_tminus1 = 0
@@ -37,7 +39,7 @@ class PTZ_Controller_Novel():
             x = time_now - time_prev
         return x
 
-    def omega_tur_plus1(self, obj_coord, center_coord, RMin = 0.0, RMax =10, TMin = 0, TMax =1):
+    def omega_tur_plus1(self, obj_coord, center_coord, RMin = 0.0, RMax =10, TMin = 0.05, TMax =1):
         if self.time_prev == None:
             self.time_prev = time.time()
         else:
@@ -88,9 +90,12 @@ def _test():
     m._test(m)
 
 
+<<<<<<< HEAD
 
 
 
+=======
+>>>>>>> development
 
 
 

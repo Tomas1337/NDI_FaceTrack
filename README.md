@@ -1,14 +1,22 @@
 # NDI_FaceTrack
 
-
-
 A Windows desktop application allows Bird Dog PTZ Cameras to automatically track persons of interests, freeing up camera operators. This application uses Machine Learning and CV Techniques to Identify and track both faces and human body figures.
 
-NDI Facetracking uses open multiple open source projects to work seamlessly betwween each other, namely:
-- A self-implemented state-of-the-art tracking algorithm based on the following paper: http://downloads.hindawi.com/journals/mpe/2019/9602460.pdf
+Backend: The backend framework is built from a pure FastAPI framework. The FastAPI handles communication between external applications using websockets and namedPipes(FIFO). 
+
+Currently it supports data exchanged between:
+
+1) Websockets (Pickle)  :
+2) Websockets (Qt)      :
+3) namedPipes (Pickle)  :
+
+Frontend: The GUI interface available in TrackingGUI.py is built on top of the PySide2 (Qt) framework. It communicates with the FastAPI backend using namedPipes(FIFO).
+
+NDI Facetracking uses open multiple open source projects to work seamlessly betwen each other, namely:
+- A self-implemented state-of-the-art tracking algorithm based on the following paper: https://www.hindawi.com/journals/mpe/2019/
 - A robust and fast facial detection method using MTCNN: https://github.com/ipazc/
 - OpenCV Object Trackers
-- Custom Tiny Yolov3 PRN 
+- Custom Tiny Yolov4 running on OpenCV DNN 
 - NDI C++  / Python Wrapper Library: https://github.com/buresu/ndi-python
 
 

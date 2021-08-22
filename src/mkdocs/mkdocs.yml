@@ -1,0 +1,6 @@
+site_name: NDI Face Track
+nav:
+  - Home: index.md
+  - Documentation: docs.md
+
+theme: readthedocs
