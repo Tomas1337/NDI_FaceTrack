@@ -3,6 +3,7 @@ import numpy as np
 import cv2 as cv
 import time
 import NDIlib as ndi
+import ptvsd
 
 class ndi_camera:
     def __init__(self):
@@ -28,10 +29,14 @@ class ndi_camera:
             ndi.find_wait_for_sources(self.ndi_find, 1000)
             self.sources = ndi.find_get_current_sources(self.ndi_find)
             print("Sources Length: {}".format(len(self.sources)))
+            print(f'Camera has URL address of {self.sources[0].url_address}')
+
+            
     
 
     def find_ptz(self):
         #initiate this temp object for checking
+        #TODO
         ptz_list = []
         for i, src in enumerate(self.sources):
             #Connect to each source to receive meta_data
@@ -53,7 +58,7 @@ class ndi_camera:
         return ptz_list, self.sources
 
     def camera_connect(self, src=None, ndi_name=None, ndi_address=None):
-        #ptvsd.debug_this_thread()
+        ptvsd.debug_this_thread()
         """
         Connect to the camera and returns a connected NDI Receive Object
         Args:
@@ -76,7 +81,7 @@ class ndi_camera:
             ndi_source = self.create_ndi_source_preset(ndi_name)
             ndi.recv_connect(ndi_recv, ndi_source)
             print(f'NDI Name Preset: {ndi_name}')
-
+            
         else:
             print("Could not create a proper NDI Receive Object")
             return None

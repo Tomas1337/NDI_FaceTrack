@@ -38,6 +38,9 @@ class DetectionWidget():
         self.b_tracker = None
         self.f_tracker = None
 
+        #Toggle for face recognition
+        self.f_recognition = False
+
         #Object Detectors
         self.face_obj = FastMTCNN() #TRY THIS FIRST
         self.body_obj = Yolo_v4TINY()
@@ -128,6 +131,7 @@ class DetectionWidget():
             self.lost_tracking = 0
 
         #Initiate Lost Tracking sub-routine
+        #@TODO: Improve the lost tracking sub-routine
         else:
             if self.lost_tracking > 100 and self.lost_tracking < 500:
                 self.info_status("Lost Tracking Sequence Secondary")
@@ -145,6 +149,32 @@ class DetectionWidget():
                 self.lost_tracking += 1
                 if self.lost_tracking < 500 and self.lost_tracking%100:
                     self.b_tracker = None
+
+        @staticmethod
+        def extract_identity(frame: np.ndarray, bounding_box: list, face_flag: bool = True):
+            # Is the boundingbox a body or face? Could be any object
+            # If body, try to extract the face
+
+            # If Face check if it's a frontal face (Using face alignment? Or using face feature score? Or how many keypoints are available?)
+            
+            # Get Face embeddings
+
+            # Push embedding to database
+
+            # Check
+
+            def crop_boundingbox():
+                pass
+
+            def check_frontal_face():
+                pass
+
+            def get_face_embeddings():
+                pass
+            
+            pass
+            
+           # return (identity_embedding, identity_name,identity_type)
 
         ## CAMERA CONTROL
         x_controller = PTZ_Controller_Novel(self.focal_length, self.gamma)

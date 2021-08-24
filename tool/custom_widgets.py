@@ -1,12 +1,8 @@
 __author__ = "Tomas Lastrilla"
 __version__ = "0.1.1"
 
-from PySide2.QtCore import QSize, Qt, QMimeData, QPointF, Signal
-<<<<<<< HEAD
-from PySide2.QtWidgets import QMessageBox, QGraphicsTextItem, QGridLayout, QPushButton, QSizePolicy, QLabel, QVBoxLayout, QWidget, QApplication, QGraphicsView, QGraphicsScene, QGraphicsEllipseItem
-=======
-from PySide2.QtWidgets import QGraphicsTextItem, QGridLayout, QPushButton, QMessageBox, QSizePolicy, QLabel, QVBoxLayout, QWidget, QApplication, QGraphicsView, QGraphicsScene, QGraphicsEllipseItem
->>>>>>> development
+from PySide2.QtCore import QSize, Qt, QMimeData, QPointF, Signal, Slot
+from PySide2.QtWidgets import QGraphicsTextItem, QGridLayout, QPushButton, QMessageBox, QSizePolicy, QLabel, QVBoxLayout, QWidget, QApplication, QGraphicsView, QGraphicsScene, QGraphicsEllipseItem,QLineEdit
 from PySide2.QtGui import QPainter, QColor, QFont, QIcon, QDrag, QPixmap
 import sys
 
@@ -232,3 +228,35 @@ def DialogBox():
    if returnValue == QMessageBox.Ok:
        print('OK clicked')
 >>>>>>> development
+
+class QNameTag(QLineEdit):
+    #Custom signal for a modified textEdited Signal that emits a list of [previous_str, new_string]
+    
+    change_name_signal = Signal(list)
+
+    def __init__(self, text):
+        #ptvsd.debug_this_thread()
+        super().__init__()
+        self.setText(text)
+        self.returnPressed.connect(self.set_read_only)
+        self.returnPressed.connect(self.change_name)
+        self.old_name = self.text()
+        self.setReadOnly(True)
+        #self.setEnabled(False)
+        
+    def mouseDoubleClickEvent(self, event):
+        self.saved_name = self.text() 
+        self.setReadOnly(False)
+        # do something
+
+    def change_name(self):
+        self.change_name_signal.emit([self.saved_name, self.text()])
+
+    @Slot()
+    def set_read_only(self):
+        self.setReadOnly(True)
+
+    # def set_editable(self):
+    #     self.setReadOnly = False
+        
+

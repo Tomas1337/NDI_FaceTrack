@@ -14,10 +14,11 @@ from tool.pipeclient import PipeClient
 from tool.payloads import *
 from tool.utils import str2bool
 from tool.pyqtkeybind import keybinder
+from tool.identity_assist import IdentityAssistWindow
 from turbojpeg import TurboJPEG
 from TrackingServer_FastAPI import main as app_main
 from multiprocessing import Process
-#import ptvsd
+import ptvsd
 
 class WinEventFilter(QAbstractNativeEventFilter):
     def __init__(self, keybinder):
@@ -48,21 +49,23 @@ class MainWindow(QMainWindow):
 
     def __init__(self, parent = None, args = None):
         super(MainWindow, self).__init__(parent)
-        
-        #Initialize the GUI object
-        #Create a new worker thread
         self.args = args
         self.gui = WindowGUI(self, args)
         self.setCentralWidget(self.gui) 
-        self.createThreads()
         self.createMenuBar()
+        self.createThreads()
 
         #Make any cross object connections
         self._connectSignals()
         title = "NDI FaceTrack"
         self.setWindowTitle(title) 
         self.gui.show()
-        self.setFixedSize(700, 660)
+        screen_size = QApplication.primaryScreen().size()
+        #1920 1080 width height (700, 660) 
+        width = int(screen_size.width() * 0.365)
+        height = int(screen_size.height() * 0.60)
+        self.setFixedSize(width, height)
+        self.ida_counter = 0
         if args['name'] is not None:
             self.preset_camera_signal.emit()
 
@@ -91,6 +94,20 @@ class MainWindow(QMainWindow):
     def createMenuBar(self):
         bar = self.menuBar()
         self.sources = bar.addMenu("Sources")
+        self.add_ons = bar.addMenu("Add-ons")
+        self.addon_identity_assist = self.add_ons.addAction("Identity Assist")
+        self.addon_identity_assist.triggered.connect(self.identity_assist_window)
+
+    def identity_assist_window(self):
+        self.id_assist_window = IdentityAssistWindow(self)
+        self.id_assist_window.show()
+        self.vid_worker.IdentityAssistFrameSignal.connect(self.id_assist_window.get_keyframe)
+        #self.vid_worker.IdentityAssistFrameSignal.connect(self.test_slot)
+        self.id_assist_window.IdentityAssistEnableSignal.connect(self.vid_worker.detect_identity_assist_state)
+
+    @Slot(np.ndarray)
+    def test_slot(self, frame):
+        print(f'frame received with shape of {frame.shape}')
 
     @Slot(list)
     def populateSources(self, _list):
@@ -99,7 +116,7 @@ class MainWindow(QMainWindow):
             entry = self.sources.addAction(item)
             entry.triggered.connect(self.camera.connect_to_camera) 
         entry.triggered.connect(self.vid_worker.stop_read_video)
-    
+
     ### SIGNALS
     def createThreads(self):
         self.camera = CameraObject(args = self.args)
@@ -126,6 +143,7 @@ class MainWindow(QMainWindow):
         self.vid_worker.FaceFrameSignal.connect(self.face_detector.server_transact)
         self.vid_worker.DisplayNormalVideoSignal.connect(self.gui.setImage)
         self.vid_worker.FPSSignal.connect(self.gui.updateFPS)
+        
 
         self.face_detector.CameraZoomControlSignal.connect(self.vid_worker.zoom_camera_control)
         self.face_detector.DisplayVideoSignal.connect(self.gui.setImage)
@@ -208,9 +226,6 @@ class MainWindow(QMainWindow):
         camera_zoom_speed = CONFIG.getfloat('camera_control', 'camera_zoom_speed')
         self.camera_control_zoom_signal.emit(vector * camera_zoom_speed)
         
-    @Slot(np.ndarray)
-    def face_track_signal_handler(self, frame):
-        self.face_track_signal.emit(frame)
     
 class WindowGUI(QWidget):
     def __init__(self, parent, args):
@@ -224,8 +239,11 @@ class WindowGUI(QWidget):
 
         #Video Widgets
         self.video_frame = QLabel('',self)
-        self.video_frame.setFixedHeight(360)
-        self.video_frame.setMinimumWidth(682)
+        screen_size = QApplication.primaryScreen().size()
+        height = screen_size.height()
+        width = screen_size.width()
+        self.video_frame.setFixedHeight(int(height*0.33))
+        self.video_frame.setMinimumWidth(int(width*0.355))   
         self.video_frame.setAutoFillBackground(True)
         self.video_frame.setStyleSheet("background-color:#000000;")
         self.video_frame.setAlignment(Qt.AlignCenter)
@@ -246,17 +264,17 @@ class WindowGUI(QWidget):
         self.reset_track_button.setMinimumWidth(300)
 
         #Y-Axis Tracking
-        self.y_enable_button = QToggleButton('Vertical Tracking')
+        self.y_enable_button = QToggleButton('Vertical Framing')
         self.y_enable_button.setCheckable(True)
         self.y_enable_button.setChecked(True)
-        self.y_enable_button.setFixedHeight(70)
+        self.y_enable_button.setFixedHeight(int(height*0.0648))
         self.y_enable_button.setDisabled(True)
 
         #Lost Auto Zoom Out Buttons
         self.azoom_lost_face_button = QToggleButton('Auto-Find Lost')
         self.azoom_lost_face_button.setCheckable(True)
         self.azoom_lost_face_button.setChecked(True)
-        self.azoom_lost_face_button.setFixedHeight(70)
+        self.azoom_lost_face_button.setFixedHeight(int(height*0.0648))
         self.azoom_lost_face_button.setDisabled(True)
 
         #Gamma Sliders
@@ -311,11 +329,11 @@ class WindowGUI(QWidget):
         ## LAYOUTING ##
         layout = QVBoxLayout(self)
         vid_layout = QVBoxLayout(self)
-    
-        controls_layout = QGridLayout(self)
-        controls_layout.setSpacing(10)
         layout.addLayout(vid_layout)
 
+        controls_layout = QGridLayout(self)
+        controls_layout.setSpacing(10)
+        #   controls_layout.setFixedHeight(200)
         vid_layout.addWidget(self.info_panel)
         vid_layout.addWidget(self.video_frame)
         vid_layout.setAlignment(self.video_frame, Qt.AlignCenter)
@@ -500,6 +518,7 @@ class Video_Object(QObject):
     """
     PixMapSignal = Signal(QImage)
     FaceFrameSignal = Signal(np.ndarray)
+    IdentityAssistFrameSignal = Signal(np.ndarray)
     DisplayNormalVideoSignal = Signal(QImage)
     FPSSignal = Signal(float)
     
@@ -509,15 +528,15 @@ class Video_Object(QObject):
         self.frame_count = 1
         self.skip_frames = 1
         self.keypress = False
+        self.identity_assist_state = False
 
     @Slot()
     def stop_read_video(self):
-        #ptvsd.debug_this_thread()
         self.read_video_flag = False
 
     @Slot(object)
     def read_video(self, ndi_object):
-        #ptvsd.debug_this_thread()
+        ptvsd.debug_this_thread()
         FRAME_WIDTH = 640
         FRAME_HEIGHT = 360
         self.ndi_recv = ndi_object
@@ -525,6 +544,7 @@ class Video_Object(QObject):
         diplsay_time_counter = 1
         fps_counter = 0
         self.read_video_flag = True
+        
         
         while True:
             t,v,_,_ = ndi.recv_capture_v2(self.ndi_recv, 0)
@@ -547,7 +567,11 @@ class Video_Object(QObject):
                 if self.face_track_state == False:
                     self.display_plain_video(frame)
                 elif self.face_track_state == True:
-                    self.FaceFrameSignal.emit(frame) 
+                    self.FaceFrameSignal.emit(frame)
+
+                if self.identity_assist_state is True:
+                    self.IdentityAssistFrameSignal.emit(frame)
+                
                 ndi.recv_free_video_v2(self.ndi_recv, v)
 
                 fps_counter += 1
@@ -559,6 +583,11 @@ class Video_Object(QObject):
     @Slot(bool)
     def detect_face_track_state(self, state):
         self.face_track_state = state
+
+    @Slot(bool)
+    def detect_identity_assist_state(self, state):
+        print("Identity Signal Enable received")
+        self.identity_assist_state = state
 
     def display_plain_video(self, image):
         height, width, colors = image.shape
@@ -593,7 +622,6 @@ class FaceDetectionWidget(QObject):
     DisplayVideoSignal = Signal(QImage)
     CameraControlSignal = Signal(float, float)
     CameraZoomControlSignal = Signal(float)
-    BoundingBoxSignal = Signal(int, int, int, int)
     signalStatus = Signal(str)
     info_status = Signal(str)
     
@@ -616,7 +644,7 @@ class FaceDetectionWidget(QObject):
     @Slot(np.ndarray)
     def server_transact(self, frame):
         """
-        Does a read and write to Server through a pipe
+        Does a read and write to Server through a FIFO Pipe
         Args:
           frame (np.ndarray): image frame sent to the server,
         """
@@ -631,17 +659,13 @@ class FaceDetectionWidget(QObject):
                                                         y_track_state = self.y_track_state,
                                                         autozoom_state = self.autozoom_state,
                                                         reset_trigger = self.reset_trigger)
-        self.pipeClient.writeToPipe(payload = parameter_payload.pickle_object())
-        # ret_val = self.pipeClient.readFromPipe()
 
-        # if ret_val != "None":
-        #     print('fucked up the parameter sending')
-        
+        self.pipeClient.writeToPipe(payload = parameter_payload.pickle_object())
         image_payload = PipeClient_Image_Payload(frame = jpeg.encode(frame))
         self.reset_trigger = False
         self.pipeClient.writeToPipe(payload = image_payload.pickle_object())
 
-        #Receiving Pydantic payloads
+        #Receiving pickled Pydantic payloads
         response_pickled = self.pipeClient.readFromPipe()
         if response_pickled == b'':
             response = None
@@ -658,14 +682,13 @@ class FaceDetectionWidget(QObject):
             boundingBox = None
             return
         
-        self.BoundingBoxSignal.emit(boundingBox[0],boundingBox[1],boundingBox[2],boundingBox[3])
         self.displayFrame(frame, boundingBox)
 
     @Slot(bool)
     def pipeStart(self, state=True):
         """Requests a pipe to connect to
         Pipe name is stored in pipeClient.pipeName
-        """
+        """ 
         if state is True:
             
             host=CONFIG.get('server','host') 
@@ -678,7 +701,6 @@ class FaceDetectionWidget(QObject):
            
         else:
             self.pipeClient.pipeClose()
-
 
     def displayFrame(self, frame, boundingBox):
         if boundingBox is None:
@@ -803,6 +825,7 @@ def main(args = None):
     else:
         retVal = DialogBox()
         exit()
+        # @TODO: Start the server in the background
         # print('Trying to start own Server')
         # fastapi_process = Process(target = app_main)
         # fastapi_process.start()
