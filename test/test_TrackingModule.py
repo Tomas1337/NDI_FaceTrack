@@ -2,8 +2,8 @@ import sys, os
 PACKAGE_PARENT = '..'
 SCRIPT_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__))))
 sys.path.append(os.path.normpath(os.path.join(SCRIPT_DIR, PACKAGE_PARENT)))
-from BirdDog_TrackingModule import DetectionWidget
-from BirdDog_TrackingModule import tracker_main
+from TrackingModule import DetectionWidget
+from TrackingModule import tracker_main
 import pytest
 import cv2
 from pathlib import Path

@@ -546,3 +546,4 @@ SyntaxError: EOL while scanning string literal
 2021-08-26 12:12:10,588 - tool.logging - DEBUG - pressed from MainWindow: 68
 2021-08-26 12:17:55,958 - tool.logging - DEBUG - Initiating a face tracker
 2021-08-26 12:17:55,958 - tool.logging - DEBUG - Initiating a face tracker
+2021-08-26 13:07:38,101 - tool.logging - DEBUG - Initiating a face tracker

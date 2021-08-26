@@ -2,7 +2,7 @@ import time
 from fastapi import WebSocket, APIRouter
 from starlette.websockets import WebSocketDisconnect
 from tool.payloads import *
-from BirdDog_TrackingModule import DetectionWidget, tracker_main
+from TrackingModule import DetectionWidget, tracker_main
 from PySide2.QtCore import QDataStream, QByteArray, QIODevice,QBuffer
 from turbojpeg import TurboJPEG, TJPF_GRAY, TJSAMP_GRAY, TJFLAG_PROGRESSIVE
 

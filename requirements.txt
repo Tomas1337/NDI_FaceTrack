@@ -14,13 +14,13 @@ Pillow==8.2.0
 pyinstaller==4.2
 pyinstaller-hooks-contrib==2020.11
 PySide2==5.15.2
-pywin32
+pywin32==301
 pywin32-ctypes==0.2.0
 requests==2.25.1
 shiboken2==5.15.2
 six==1.15.0
-torch==1.6.0+cpu
-torchvision==0.7.0+cpu
+torch
+torchvision
 PyTurboJPEG
 urllib3==1.26.5
 uvicorn

@@ -6,7 +6,7 @@ SCRIPT_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.
 sys.path.append(os.path.normpath(os.path.join(SCRIPT_DIR, PACKAGE_PARENT)))
 from TrackingGUI import main
 from TrackingGUI import MainWindow
-from BirdDog_TrackingModule import DetectionWidget
+from TrackingModule import DetectionWidget
 from tool.logging import add_logger
 from PySide2.QtTest import QTest
 from PySide2.QtWidgets import QApplication
