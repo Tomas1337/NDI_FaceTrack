@@ -4,9 +4,9 @@ import os, sys, time
 PACKAGE_PARENT = '..'
 SCRIPT_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__))))
 sys.path.append(os.path.normpath(os.path.join(SCRIPT_DIR, PACKAGE_PARENT)))
-from FaceTrackInterface import main
-from FaceTrackInterface import MainWindow
-from FaceTrackInterface import parse_args
+from TrackingGUI import main
+from TrackingGUI import MainWindow
+from TrackingGUI import parse_args
 from tool.logging import add_logger
 from PySide2.QtTest import QTest
 from PySide2.QtWidgets import QApplication
@@ -40,13 +40,13 @@ def application_startup():
 
 def connect_to_camera_sequence(qtbot, form):
     form.sources.aboutToShow.emit()
-    with qtbot.waitSignal(form.worker.ptz_list_signal, timeout=5000) as blocker:
+    with qtbot.waitSignal(form.camera.ptz_list_signal, timeout=5000) as blocker:
         pass
 
     form.sources.actions()[0].trigger()
-    with qtbot.waitSignal(form.worker.enable_controls_signal, timeout=5000) as blocker:
-        blocker.connect(form.worker.ptz_object_signal)
-        blocker.connect(form.worker.enable_controls_signal)
+    with qtbot.waitSignal(form.camera.enable_controls_signal, timeout=5000) as blocker:
+        blocker.connect(form.camera.ptz_object_signal)
+        blocker.connect(form.camera.enable_controls_signal)
         blocker.connect(form.vid_worker.DisplayNormalVideoSignal)
     #qtbot.mouseClick(form.gui.face_track_button, Qt.LeftButton)
 
@@ -77,7 +77,7 @@ def test_wasd_keys(qtbot, application_startup):
     qtbot.addWidget(form)
 
     #2 consecutive signals calling for move and stop.
-    signals = [form.worker.camera_control_sent_signal, form.worker.camera_control_sent_signal]
+    signals = [form.camera.camera_control_sent_signal, form.camera.camera_control_sent_signal]
     #W
     callbacks = [wasd_w_move, wasd_stop]
     with qtbot.waitSignals(signals, raising=False, check_params_cbs=callbacks) as blocker:
@@ -100,7 +100,7 @@ def test_wasd_keys(qtbot, application_startup):
     
     #WASD where the camera is connected
     connect_to_camera_sequence(qtbot, form)
-    signals = [form.worker.camera_control_sent_signal, form.worker.camera_control_sent_signal]
+    signals = [form.camera.camera_control_sent_signal, form.camera.camera_control_sent_signal]
     #W
     callbacks = [wasd_w_move, wasd_stop]
     with qtbot.waitSignals(signals, raising=False, check_params_cbs=callbacks) as blocker:
@@ -123,12 +123,12 @@ def test_wasd_keys(qtbot, application_startup):
     
 def test_face_track_button(qtbot):
     id = 1
-    parser = parse_args(['-i', str(id),"--name","DESKTOP-C16VMFB (VLC)"])
+    parser = parse_args(['-i', str(id),"--name","LAPTOP-69NS8K2K (VLC)"])
     args = vars(parser)
     form = MainWindow(args=args)
     form.show()
     qtbot.addWidget(form)
-    #connect_to_camera_sequence(qtbot, form)
+    connect_to_camera_sequence(qtbot, form)
 
     # #Press the `Source` Menu and wait to populate
     # form.sources.aboutToShow.emit()
@@ -146,10 +146,13 @@ def test_face_track_button(qtbot):
 
     #Simulate pressing the track button multiple times.
     qtbot.wait(5000)
+    qtbot.mouseClick(form.gui.face_track_button, Qt.LeftButton)
 
+    qtbot.wait(200)
     assert form.gui.face_track_button.isEnabled() == True
     assert form.gui.face_track_button.isChecked() == True
     assert form.vid_worker.face_track_state == True
+    print('here track button')
 
     #OFF
     qtbot.mouseClick(form.gui.face_track_button, Qt.LeftButton)
@@ -193,28 +196,32 @@ def test_tracker_stop_movement(qtbot, application_startup):
     
     #Enable Tracking
     #Simulate pressing the track button.
+    qtbot.wait(200)
     assert form.gui.face_track_button.isEnabled() == True
     assert form.gui.face_track_button.isChecked() == False
     assert form.vid_worker.face_track_state == False
 
     #Turn On through GUI
     with qtbot.waitSignal(form.vid_worker_thread.eventDispatcher().awake) as blocker:
+        qtbot.wait(200)
         qtbot.mouseClick(form.gui.face_track_button, Qt.LeftButton)
+
+    qtbot.wait(200)
     assert form.gui.face_track_button.isChecked() == True
     assert form.vid_worker.face_track_state == True
 
     #Make sure there is movement 
-    with qtbot.waitSignal(form.worker.camera_control_sent_signal,raising = False, check_params_cb=camera_moving) as blocker:
+    with qtbot.waitSignal(form.camera.camera_control_sent_signal,raising = False, check_params_cb=camera_moving) as blocker:
         pass
 
     #Turn off the tracking through GUI, but must first send final 0,0
-    signals = [form.vid_worker_thread.eventDispatcher().awake, form.worker.camera_control_sent_signal]
+    signals = [form.vid_worker_thread.eventDispatcher().awake, form.camera.camera_control_sent_signal]
     callbacks = [None, wasd_stop]
     with qtbot.waitSignals(signals, raising=False, check_params_cbs=callbacks, order='strict' ) as blocker:
         qtbot.mouseClick(form.gui.face_track_button, Qt.LeftButton)
 
     #Make sure that the camera event is not emitted
-    with qtbot.assertNotEmitted(form.worker.camera_control_sent_signal, wait =1000):
+    with qtbot.assertNotEmitted(form.camera.camera_control_sent_signal, wait =1000):
         pass
     assert form.gui.face_track_button.isChecked() == False
     assert form.vid_worker.face_track_state == False
@@ -228,13 +235,16 @@ def test_zero_movement(qtbot, application_startup):
     connect_to_camera_sequence(qtbot, form)
     #Enable Tracking
     #Simulate pressing the track button.
+    qtbot.wait(200)
     assert form.gui.face_track_button.isEnabled() == True
     assert form.gui.face_track_button.isChecked() == False
     assert form.vid_worker.face_track_state == False
 
     #Turn On through GUI
     with qtbot.waitSignal(form.vid_worker_thread.eventDispatcher().awake) as blocker:
+        qtbot.wait(200)
         qtbot.mouseClick(form.gui.face_track_button, Qt.LeftButton)
+    qtbot.wait(200)
     assert form.gui.face_track_button.isChecked() == True
     assert form.vid_worker.face_track_state == True
 
@@ -242,7 +252,7 @@ def test_zero_movement(qtbot, application_startup):
     Y_speed = []
     speed_vectors = []
     for i in range(1,10):
-        with qtbot.waitSignal(form.worker.camera_control_sent_signal, raising = False, timeout=50) as blocker:
+        with qtbot.waitSignal(form.camera.camera_control_sent_signal, raising = False, timeout=50) as blocker:
             pass
         try:
             X_speed.append(blocker.args[0])
@@ -252,22 +262,6 @@ def test_zero_movement(qtbot, application_startup):
             pass
 
     assert not any(sum(1 for _ in g) > 2 for _, g in groupby(speed_vectors))
-
-def test_reset_button_shortcut(qtbot, application_startup):
-    form = application_startup
-    form.show()
-
-    qtbot.addWidget(form)
-    connect_to_camera_sequence(qtbot, form)
-
-    #Activate tracking
-    with qtbot.waitSignal(form.vid_worker_thread.eventDispatcher().awake) as blocker:
-        qtbot.mouseClick(form.gui.face_track_button, Qt.LeftButton)
-    shell = win32com.client.Dispatch("WScript.Shell")
-    #Press Reset Shortcut Button
-    
-    with qtbot.waitSignal(form.gui.reset_track_button.clicked) as blocker:
-        shell.SendKeys("+%1")
 
 def test_face_track_button_shortcut(qtbot):
     for id in range(1,4):
@@ -281,7 +275,7 @@ def test_face_track_button_shortcut(qtbot):
         connect_to_camera_sequence(qtbot, form)
 
         #Install a native event filter to receive events from the OS
-        from FaceTrackInterface import WinEventFilter
+        from TrackingGUI import WinEventFilter
         from PySide2.QtCore import QAbstractEventDispatcher
         win_event_filter = WinEventFilter(keybinder)
         event_dispatcher = QAbstractEventDispatcher.instance()
@@ -294,8 +288,7 @@ def test_face_track_button_shortcut(qtbot):
         shell = win32com.client.Dispatch("WScript.Shell")
         shell.SendKeys(f"^+{id}")
 
-        qtbot.wait(100)
-
+        qtbot.wait(200)
         assert form.gui.face_track_button.isChecked() == True
         assert form.vid_worker.face_track_state == True
         assert form.face_detector.track_type == 0
@@ -328,7 +321,7 @@ def test_close_application_shortcut(qtbot):
         connect_to_camera_sequence(qtbot, form)
 
         #Install a native event filter to receive events from the OS
-        from FaceTrackInterface import WinEventFilter
+        from TrackingGUI import WinEventFilter
         from PySide2.QtCore import QAbstractEventDispatcher
         win_event_filter = WinEventFilter(keybinder)
         event_dispatcher = QAbstractEventDispatcher.instance()
@@ -358,7 +351,7 @@ def test_close_application_shortcut_hidden(qtbot):
         connect_to_camera_sequence(qtbot, form)
 
         #Install a native event filter to receive events from the OS
-        from FaceTrackInterface import WinEventFilter
+        from TrackingGUI import WinEventFilter
         from PySide2.QtCore import QAbstractEventDispatcher
         win_event_filter = WinEventFilter(keybinder)
         event_dispatcher = QAbstractEventDispatcher.instance()

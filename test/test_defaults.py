@@ -4,14 +4,14 @@ import os, sys
 PACKAGE_PARENT = '..'
 SCRIPT_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__))))
 sys.path.append(os.path.normpath(os.path.join(SCRIPT_DIR, PACKAGE_PARENT)))
-from FaceTrackInterface import main
-from FaceTrackInterface import MainWindow
+from TrackingGUI import main
+from TrackingGUI import MainWindow
 from tool.logging import add_logger
 from PySide2.QtTest import QTest
 from PySide2.QtWidgets import QApplication
 from tool.pyqtkeybind import keybinder
 from config import CONFIG
-from FaceTrackInterface import parse_args
+from TrackingGUI import parse_args
 
 #import ptvsd
 
@@ -47,6 +47,6 @@ def test_defaults(qtbot):
     assert form.gui.reset_track_button.isEnabled() == False
     assert form.gui.y_minE_slider.isEnabled() == False
     assert form.gui.x_minE_slider.isEnabled() == False
-    assert form.gui.adv_options_group.isChecked() == False
+    #assert form.gui.adv_options_group.isEnabled() == False
 
     

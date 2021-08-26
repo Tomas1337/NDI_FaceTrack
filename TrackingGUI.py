@@ -62,7 +62,12 @@ class MainWindow(QMainWindow):
         title = "NDI FaceTrack"
         self.setWindowTitle(title) 
         self.gui.show()
-        self.setFixedSize(700, 660)
+        screen_size = QApplication.primaryScreen().size()
+        #1920 1080 width height (700, 660) 
+        width = int(screen_size.width() * 0.365)
+        height = int(screen_size.height() * 0.60)
+        self.setFixedSize(width, height)
+        self.ida_counter = 0
         if args['name'] is not None:
             self.preset_camera_signal.emit()
 
@@ -224,8 +229,11 @@ class WindowGUI(QWidget):
 
         #Video Widgets
         self.video_frame = QLabel('',self)
-        self.video_frame.setFixedHeight(360)
-        self.video_frame.setMinimumWidth(682)
+        screen_size = QApplication.primaryScreen().size()
+        height = screen_size.height()
+        width = screen_size.width()
+        self.video_frame.setFixedHeight(int(height*0.33))
+        self.video_frame.setMinimumWidth(int(width*0.355))   
         self.video_frame.setAutoFillBackground(True)
         self.video_frame.setStyleSheet("background-color:#000000;")
         self.video_frame.setAlignment(Qt.AlignCenter)
@@ -249,14 +257,14 @@ class WindowGUI(QWidget):
         self.y_enable_button = QToggleButton('Vertical Tracking')
         self.y_enable_button.setCheckable(True)
         self.y_enable_button.setChecked(True)
-        self.y_enable_button.setFixedHeight(70)
+        self.y_enable_button.setFixedHeight(int(height*0.0648))
         self.y_enable_button.setDisabled(True)
 
         #Lost Auto Zoom Out Buttons
         self.azoom_lost_face_button = QToggleButton('Auto-Find Lost')
         self.azoom_lost_face_button.setCheckable(True)
         self.azoom_lost_face_button.setChecked(True)
-        self.azoom_lost_face_button.setFixedHeight(70)
+        self.azoom_lost_face_button.setFixedHeight(int(height*0.0648))
         self.azoom_lost_face_button.setDisabled(True)
 
         #Gamma Sliders
@@ -400,7 +408,12 @@ class WindowGUI(QWidget):
         
     @Slot(QImage)
     def setImage(self, image):
-        img = image.scaled(640, 360, Qt.KeepAspectRatio)
+        screen_size = QApplication.primaryScreen().size()
+        height = int(screen_size.height() * 0.33)
+        width = int(screen_size.width() * 0.355)
+        #img = image.scaled(width, height, Qt.KeepAspectRatio)
+        #img = image.scaledToHeight(height)
+        img = image.scaledToWidth(width)
         self.video_frame.setPixmap(QPixmap.fromImage(img))
 
     def reset_defaults_handler(self, state):
@@ -544,10 +557,12 @@ class Video_Object(QObject):
                 camera_move_speed = CONFIG.getfloat('camera_control', 'camera_move_speed')
                 camera_zoom_speed = CONFIG.getfloat('camera_control', 'camera_zoom_speed')
 
+                print(f'Face Track state {self.face_track_state}')
                 if self.face_track_state == False:
                     self.display_plain_video(frame)
                 elif self.face_track_state == True:
                     self.FaceFrameSignal.emit(frame) 
+                    
                 ndi.recv_free_video_v2(self.ndi_recv, v)
 
                 fps_counter += 1

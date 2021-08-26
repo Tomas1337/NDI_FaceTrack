@@ -2,11 +2,7 @@ __author__ = "Tomas Lastrilla"
 __version__ = "0.1.1"
 
 from PySide2.QtCore import QSize, Qt, QMimeData, QPointF, Signal
-<<<<<<< HEAD
 from PySide2.QtWidgets import QMessageBox, QGraphicsTextItem, QGridLayout, QPushButton, QSizePolicy, QLabel, QVBoxLayout, QWidget, QApplication, QGraphicsView, QGraphicsScene, QGraphicsEllipseItem
-=======
-from PySide2.QtWidgets import QGraphicsTextItem, QGridLayout, QPushButton, QMessageBox, QSizePolicy, QLabel, QVBoxLayout, QWidget, QApplication, QGraphicsView, QGraphicsScene, QGraphicsEllipseItem
->>>>>>> development
 from PySide2.QtGui import QPainter, QColor, QFont, QIcon, QDrag, QPixmap
 import sys
 
@@ -92,40 +88,6 @@ class MovingObject(QGraphicsTextItem):
  
         orig_position = self.scenePos()
 
-<<<<<<< HEAD
-=======
-class MovingObject(QGraphicsTextItem):
-    mouseReleaseSignal = Signal(int, int)
-    def __init__(self, x ,y, scene_width, scene_height):
-        super().__init__()
-        self.setAcceptHoverEvents(True)
-        self.setPlainText("+")
-        self.setDefaultTextColor(Qt.red)
-        self.setFont(QFont("Arial", 35))
-        self.setTextWidth(10)
-        self.bounding_width = self.boundingRect().width()
-        self.bounding_height = self.boundingRect().height()
-        self.setfromCenter(x, y)
-
-        self.width = scene_width
-        self.height = scene_height
-
-    def setfromCenter(self, x, y):
-        x -= int(self.bounding_width/2)
-        y -= int(self.bounding_height/2)
-        self.setPos(x,y)
-
-    # mouse click event
-    def mousePressEvent(self, event):
-        pass
- 
-    def mouseMoveEvent(self, event):
-        orig_cursor_position = event.lastScenePos()
-        updated_cursor_position = event.scenePos()
- 
-        orig_position = self.scenePos()
-
->>>>>>> development
         updated_cursor_x = updated_cursor_position.x() - orig_cursor_position.x() + orig_position.x()
         updated_cursor_y = updated_cursor_position.y() - orig_cursor_position.y() + orig_position.y()
         
@@ -154,20 +116,22 @@ class MovingObject(QGraphicsTextItem):
         self.center_y = self.pos().y() + int(self.bounding_height/2)
         return (self.center_x, self.center_y)
 
+#import ptvsd 
+
 class GraphicView(QGraphicsView):
     mouseReleaseSignal = Signal(int, int)
     def __init__(self, parent):
+        #ptvsd.debug_this_thread()
         super(GraphicView, self).__init__(parent)
  
         self.scene = QGraphicsScene()
         self.setAlignment(Qt.AlignCenter)
         self.setScene(self.scene)
         
-        width = parent.parent().parent().size().width()
-        height = parent.frameGeometry().height() 
-        center = (width/2, height/2)
-        print("Center {}".format(center))
-
+        width = parent.width()
+        height = parent.height() 
+        center = (width//2, height//2)
+        
         self.setSceneRect(0, 0, width, height)
         #self.setStyleSheet("background-color: #1c2e66;")
         self.setStyleSheet("background:transparent;")
@@ -177,7 +141,7 @@ class GraphicView(QGraphicsView):
         self.mouseReleaseSignal.connect(self.moveObject.mouseReleaseEvent)
 
         self.scene.addItem(self.moveObject)
-        self.move(21,21) #Manual move since it wont center properly
+        #self.move(21,21) #Manual move since it wont center properly
 
     def getPosition(self):
         (center_x, center_y) = self.moveObject._getPosition()
@@ -187,7 +151,6 @@ class GraphicView(QGraphicsView):
         (center_x, center_y) = self.moveObject._getPosition()
         self.mouseReleaseSignal.emit(center_x, center_y)
 
-<<<<<<< HEAD
 class DialogBox(): 
     def __init__(self, mode = "info", text=None):
         msg = QMessageBox()
@@ -220,15 +183,3 @@ class DialogBox():
 
     def set_detailed_text(self, detailed_text):
         self.msg.setDetailedText(detailed_text)
-=======
-def DialogBox():
-   msgBox = QMessageBox()
-   msgBox.setIcon(QMessageBox.Critical)
-   msgBox.setText("Please start the NDI_FaceTrack.exe server before launching GUI")
-   msgBox.setWindowTitle("Launch Error")
-   msgBox.setStandardButtons(QMessageBox.Ok)
-
-   returnValue = msgBox.exec()
-   if returnValue == QMessageBox.Ok:
-       print('OK clicked')
->>>>>>> development

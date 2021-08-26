@@ -1,18 +1,11 @@
 import time, cv2, os
 import numpy as np
 from facenet_pytorch import MTCNN
-<<<<<<< HEAD
 
 #from imutils.object_detection import non_max_suppression
 #import ptvsd
 CURR_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),".."))
 
-=======
-from imutils.object_detection import non_max_suppression
-import os
-import time
-CURR_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),".."))
->>>>>>> development
 class FastMTCNN(object):
     """MTCNN implementation."""
     
@@ -102,10 +95,6 @@ class Yolov3(object):
         #self.mot_tracker = Sort()
         self.detections = []
 
-<<<<<<< HEAD
-=======
-
->>>>>>> development
     def update(self, frames, minConf = 0.4, threshold = 0.5):
         idxs = []
         self.boxes = []
@@ -150,7 +139,6 @@ class Yolov3(object):
         idxs = cv2.dnn.NMSBoxes(self.boxes, self.confidences, minConf, threshold)
         return idxs, self.boxes, self.COLORS, self.LABELS, self.classIDs, self.confidences
 
-<<<<<<< HEAD
 class Yolo_v4TINY(object):
     CONFIDENCE_THRESHOLD = 0.2
     NMS_THRESHOLD = 0.4
@@ -160,7 +148,6 @@ class Yolo_v4TINY(object):
         labelsPath = os.path.join(CURR_PATH, "models\coco.names")
         weightsPath = os.path.join(CURR_PATH, "models\yolov4-tiny.weights")
         configPath = os.path.join(CURR_PATH, "models\yolov4-tiny.cfg")
-
 
         with open(labelsPath, 'r') as f: 
             self.LABELS = f.read().strip().split("\n")
@@ -203,18 +190,7 @@ class Yolo_v4TINY(object):
                 return None, [], None, None, None, None
         else:
             return None, [], None, None, None, None
-
-class Face_Locker(object):
-    """Class that enables facial recognition to allow the Program to track only faces in memory.
-    Uses face encodings to differentiate between faces.
-
-    Not in active development as of 09/24/2020
-    """
-=======
-
-
 class Yolov4(object):
->>>>>>> development
     def __init__(self):
         np.random.seed(42)
         weightsPath = "models/yolov4-tiny.weights"
@@ -251,7 +227,6 @@ class Yolov4(object):
         #print("Detection yolov3 time takes  {}".format(time.time()-start))
         # loop over each of the layer outputs
 
-<<<<<<< HEAD
         text_file = open('models/faces/faces_d.txt', 'r')
         self.known_face_names = text_file.read().splitlines()
         print('Loading Face Locker takes: {}s'.format(time.time()-toc))
@@ -262,88 +237,36 @@ class Yolov4(object):
         """
         TODO: Change paths to be dynamic
         Expects a frame in the face with, with face_coords for ONE face in the format x1,y1,w,h
-        Face encodings take the format [[y1, x2, y2, x1]] (List of Tuples)
-=======
-        for output in layerOutputs:
-            # loop over each of the detections
-            for detection in output:
-                scores = detection[5:]
-                classID = np.argmax(scores)
-                #Filter out only person detections
-                if not classID == 0:
-                    continue 
-                confidence = scores[classID]
-                if confidence > minConf:
-                    #print('Confidence: {}'.format(confidence))
-                    box = detection[0:4] * np.array([W, H, W, H])
-                    (centerX, centerY, width, height) = box.astype("int")
->>>>>>> development
+        Face encodings take the format [[y1, x2, y2, x1]] (List of Tuples)    
+        """
 
-                    x = int(centerX - (width / 2))
-                    y = int(centerY - (height / 2))
+        # for output in layerOutputs:
+        #     # loop over each of the detections
+        #     for detection in output:
+        #         scores = detection[5:]
+        #         classID = np.argmax(scores)
+        #         #Filter out only person detections
+        #         if not classID == 0:
+        #             continue 
+        #         confidence = scores[classID]
+        #         if confidence > minConf:
+        #             #print('Confidence: {}'.format(confidence))
+        #             box = detection[0:4] * np.array([W, H, W, H])
+        #             (centerX, centerY, width, height) = box.astype("int")
+
+        #             x = int(centerX - (width / 2))
+        #             y = int(centerY - (height / 2))
                     
         
-                    self.classIDs.append(classID)
-                    self.boxes.append([x, y, int(width), int(height)])
-                    self.confidences.append(float(confidence))
-                    self.detections.append([x,y,x+width,y+height,confidence])
+        #             self.classIDs.append(classID)
+        #             self.boxes.append([x, y, int(width), int(height)])
+        #             self.confidences.append(float(confidence))
+        #             self.detections.append([x,y,x+width,y+height,confidence])
 
 
-        idxs = cv2.dnn.NMSBoxes(self.boxes, self.confidences, minConf, threshold)
-        return idxs, self.boxes, self.COLORS, self.LABELS, self.classIDs, self.confidences
+        # idxs = cv2.dnn.NMSBoxes(self.boxes, self.confidences, minConf, threshold)
+        # return idxs, self.boxes, self.COLORS, self.LABELS, self.classIDs, self.confidences
 
-class Yolo_v4TINY(object):
-    CONFIDENCE_THRESHOLD = 0.2
-    NMS_THRESHOLD = 0.4
-    COLORS = [(0, 255, 255), (255, 255, 0), (0, 255, 0), (255, 0, 0)]
-    
-    def __init__(self):
-        labelsPath = os.path.join(CURR_PATH, "models\coco.names")
-        weightsPath = os.path.join(CURR_PATH, "models\yolov4-tiny.weights")
-        configPath = os.path.join(CURR_PATH, "models\yolov4-tiny.cfg")
-
-
-        with open(labelsPath, 'r') as f: 
-            self.LABELS = f.read().strip().split("\n")
-        self.net = cv2.dnn.readNet(weightsPath, configPath)
-        # self.net.setPreferableBackend(cv2.dnn.DNN_BACKEND_CUDA)
-        # self.net.setPreferableTarget(cv2.dnn.DNN_TARGET_CUDA_FP16)
-        self.model = cv2.dnn_DetectionModel(self.net)
-        self.model.setInputParams(size=(416, 416), scale=1/255)
-
-    def update(self, frames, minConf = 0.4, threshold = 0.5):
-        """TODO
-        Fix the class parser. It's ugly right now
-        """
-        #ptvsd.debug_this_thread()
-        idxs = []
-        self.boxes = []
-        self.confidences = []
-        self.classIDs = []
-        (H, W) = frames.shape[:2]
-        classIDs, scores, boxes = self.model.detect(frames, self.CONFIDENCE_THRESHOLD, self.NMS_THRESHOLD)
-
-        if len(classIDs) > 0:
-            mask = classIDs == 0
-            if True in mask.squeeze():
-                curr_score = 0
-                for index, p in enumerate(mask):
-                    if p == True and scores[index] >= curr_score:
-                        curr_score = scores[index]
-                        top = index
-                        self.confidences.append(curr_score)
-                box = boxes[top]
-                (X, Y, width, height) = box.astype("int")
-
-                #self.classIDs.append(classIDs)
-                self.boxes.append([int(X), int(Y), int(width), int(height)])
-                #self.detections.append([x,y,x+width,y+height,scores])
-                #idxs = cv2.dnn.NMSBoxes(self.boxes, self.confidences, minConf, threshold)
-                return None, self.boxes, None, None, None,self.confidences
-            else:
-                return None, [], None, None, None, None
-        else:
-            return None, [], None, None, None, None
 
 # class Face_Locker(object):
 #     def __init__(self):

@@ -4,9 +4,9 @@ import os, sys, time
 PACKAGE_PARENT = '..'
 SCRIPT_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__))))
 sys.path.append(os.path.normpath(os.path.join(SCRIPT_DIR, PACKAGE_PARENT)))
-from FaceTrackInterface import main
-from FaceTrackInterface import MainWindow
-from FaceTrackInterface import DetectionWidget
+from TrackingGUI import main
+from TrackingGUI import MainWindow
+from BirdDog_TrackingModule import DetectionWidget
 from tool.logging import add_logger
 from PySide2.QtTest import QTest
 from PySide2.QtWidgets import QApplication
@@ -19,7 +19,7 @@ import pytest
 
 @pytest.fixture
 def get_video_path():
-    test_path = "test/test_videos"
+    test_path = "test"
     for file in os.listdir(test_path):
         if file.endswith(".mp4"):
             video_path = os.path.join(test_path, file)

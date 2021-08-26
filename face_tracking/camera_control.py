@@ -88,14 +88,3 @@ class PTZ_Controller_Novel():
 def _test():
     m = PTZ_Controller_Novel()
     m._test(m)
-
-
-<<<<<<< HEAD
-
-
-
-=======
->>>>>>> development
-
-
-

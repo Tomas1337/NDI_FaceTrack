@@ -14,7 +14,7 @@ import uvicorn
 
 
 
-"""The FaceTrackInterface.py uses namedPipes to communicate between 
+"""The TrackingGUI.py uses namedPipes to communicate between 
 the Video_Object (frame sender) and the FastAPI server.
 
 3rd Party applications may also tap into this 'namedPipe' communication 

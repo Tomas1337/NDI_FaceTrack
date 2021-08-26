@@ -7,7 +7,7 @@ import numpy as np
 import itertools
 import struct  # get_image_size
 import imghdr  # get_image_size
-
+import argparse
 
 def sigmoid(x):
     return 1.0 / (np.exp(-x) + 1.)
@@ -245,8 +245,4 @@ def str2bool(v):
     elif v.lower() in ('no', 'false', 'f', 'n', '0'):
         return False
     else:
-<<<<<<< HEAD
         raise argparse.ArgumentTypeError('Boolean value expected.')
-=======
-        raise argparse.ArgumentTypeError('Boolean value expected.')
->>>>>>> development

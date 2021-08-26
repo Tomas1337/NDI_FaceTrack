@@ -1,4 +1,4 @@
-from FaceTrackInterface import main
+from TrackingGUI import main
 
 if __name__ == '__main__':
     main()
