@@ -11,7 +11,7 @@ from starlette.responses import StreamingResponse
 from pydantic import BaseModel
 from turbojpeg import TurboJPEG, TJPF_GRAY, TJSAMP_GRAY, TJFLAG_PROGRESSIVE
 from threading import Thread
-from BirdDog_TrackingModule import DetectionWidget, tracker_main
+from TrackingModule import DetectionWidget, tracker_main
 from tool.pipeclient import PipeClient 
 from tool.payloads import *
 from routers import websockets
