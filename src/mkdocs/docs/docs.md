@@ -267,10 +267,16 @@ The following arguments allow customization of the launch parameters.
  Warning: You must pass the `name` parameter when launching. |
  Warning: By using this option, you are unable to use any of the following features: |
     
-- **Target X/Y COORD**: X and Y Position where the tracker will place the tracked person in reference to the frame. By default, the trcker will place the tracker person in the **CENTER** of the frame. 
-- **Speed Sensitivity (Gamma)**: Control how fast the camera reacts to movement.
-- **Horizontal Threshold**: The horizontal threshold on how far the target body is from the set tracking position (see Target X Coord). If the percentage is above the threshold, horizontal camera tracking will start.
+- **Target X/Y COORD**: X and Y Position where the tracker will place the tracked person in reference to the frame. By default, the trcker will place the tracker person in the CENTER of the frame. Default 0.1
+- **Speed Sensitivity (Gamma)**: Control how fast the camera reacts to movement. Default: 0.6
+- **Horizontal Threshold**: The horizontal threshold on how far the target body is from the set tracking position (see Target X Coord). If the percentage is above the threshold, horizontal camera tracking will start. Default: 0.1
 - **Vertical Threshold**: The vertical threshold on how far the target body is from the set tracking position (see Target Y Coord). If the distance is above the threshold, vertical camera tracking will start.
+- **Track Type**: Track_type will indicate the fallback sequence of detection. e.g. If Face is not detected, track the body. 
+    Default: track_type=0; Face -> Body
+    track_type=1; Track Face Only
+    track_type=2; Track Body Only
+- **Track Autozoom**: *Experimental:* If the target has been lost for 5 seconds, the camera will zoom out to try and retrieve the object again. Default `True`
+           
 - **Change sources**: Use the menu bar to select available NDI Sources
 - **WASD QE keys**: Typically, we use WASD-QE keys to move and zoom the camera. This is disabled.
 
