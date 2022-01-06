@@ -266,11 +266,11 @@ The following arguments allow customization of the launch parameters.
 
  Warning: You must pass the `name` parameter when launching. |
  Warning: By using this option, you are unable to use any of the following features: |
-
-- **Moveable Home Position**: Position where you want the tracker to place 'center' the target person.
-- **Speed Sensitivity**: Control how fast the camera reacts to movement.
-- **Horizontal Threshold**: The threshold on how far the target body is from the center. If the distance is above the threshold, horizontal camera tracking will start.
-- **Vertical Threshold**: The threshold on how far the target body is from the center. If the distance is above the threshold, vertical camera tracking will start.
+    
+- **Target X/Y COORD**: X and Y Position where the tracker will place the tracked person in reference to the frame. By default, the trcker will place the tracker person in the **CENTER** of the frame. 
+- **Speed Sensitivity (Gamma)**: Control how fast the camera reacts to movement.
+- **Horizontal Threshold**: The horizontal threshold on how far the target body is from the set tracking position (see Target X Coord). If the percentage is above the threshold, horizontal camera tracking will start.
+- **Vertical Threshold**: The vertical threshold on how far the target body is from the set tracking position (see Target Y Coord). If the distance is above the threshold, vertical camera tracking will start.
 - **Change sources**: Use the menu bar to select available NDI Sources
 - **WASD QE keys**: Typically, we use WASD-QE keys to move and zoom the camera. This is disabled.
 
