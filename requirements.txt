@@ -7,7 +7,7 @@ fastapi
 future==0.18.2
 idna==2.10
 keyboard==0.13.5
-numpy==1.21.0
+numpy==1.22.0
 opencv-contrib-python==4.5.1.48
 pefile==2019.4.18
 Pillow==9.0.1
