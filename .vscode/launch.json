@@ -45,5 +45,12 @@
             "python": "${command:python.interpreterPath}"
             
         },
+        {
+            "name": "Reid Test",
+            "type": "python",
+            "request": "launch",
+            "program": "test/test_reid.py",
+            "console": "integratedTerminal",
+        }
     ]
 }
