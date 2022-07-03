@@ -157,7 +157,7 @@ class Yolo_v4TINY(object):
         self.model = cv2.dnn_DetectionModel(self.net)
         self.model.setInputParams(size=(416, 416), scale=1/255)
 
-    def update(self, frames, minConf = 0.4, threshold = 0.5):
+    def update(self, frames, minConf = 0.4, threshold = 0.5, only_one=True):
         """TODO
         Fix the class parser. It's ugly right now
         """
@@ -170,26 +170,34 @@ class Yolo_v4TINY(object):
         classIDs, scores, boxes = self.model.detect(frames, self.CONFIDENCE_THRESHOLD, self.NMS_THRESHOLD)
 
         if len(classIDs) > 0:
-            mask = classIDs == 0
+            mask = classIDs == 0 #This is the person detectpr
             if True in mask.squeeze():
                 curr_score = 0
-                for index, p in enumerate(mask):
-                    if p == True and scores[index] >= curr_score:
-                        curr_score = scores[index]
-                        top = index
-                        self.confidences.append(curr_score)
-                box = boxes[top]
-                (X, Y, width, height) = box.astype("int")
+                if only_one:
+                    for index, p in enumerate(mask):
+                        if p == True and scores[index] >= curr_score:
+                            curr_score = scores[index]
+                            top = index
+                            self.confidences.append(curr_score)
 
+                        box = boxes[top]
+                        (X, Y, width, height) = box.astype("int")
+                        self.boxes.append([int(X), int(Y), int(width), int(height)])
+                
+                else:
+                    self.boxes = [list(x) for x,y in zip(boxes,mask) if y==True]
+                    scores = [x for x,y in zip(scores,mask) if y==True]
+                
                 #self.classIDs.append(classIDs)
-                self.boxes.append([int(X), int(Y), int(width), int(height)])
+                
                 #self.detections.append([x,y,x+width,y+height,scores])
                 #idxs = cv2.dnn.NMSBoxes(self.boxes, self.confidences, minConf, threshold)
-                return None, self.boxes, None, None, None,self.confidences
+                return None, self.boxes, None, None, None, scores
             else:
                 return None, [], None, None, None, None
         else:
             return None, [], None, None, None, None
+
 class Yolov4(object):
     def __init__(self):
         np.random.seed(42)

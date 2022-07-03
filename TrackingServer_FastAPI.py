@@ -1,3 +1,4 @@
+import re
 import time, win32file, win32pipe, cv2, json, requests
 import numpy as np 
 import uvicorn, pywintypes, pickle
@@ -15,6 +16,7 @@ from TrackingModule import DetectionWidget, tracker_main
 from tool.pipeclient import PipeClient 
 from tool.payloads import *
 from routers import websockets
+from torch import pca_lowrank
 
 BUFFERSIZE = 921654
 IMAGE_WIDTH = 640
@@ -45,11 +47,8 @@ class StartPipeResponse(BaseModel):
 def start_pipe_server():
     """
     Calling this enpoint initiates ands opens a Pipe Server from the Server end.
-    
     We expect a Pipe Client from an external application to connect to the Pipe Server initiated using the returned 'pipeName'
-    
     A handshake must be established before (initiated by the client) communication is fully established 
-
     The pipe will expect either a 'image' or 'paramater' pickle object as defined by 'Image_Payload' and 'Parameter_Payload'.
         
         ```py
@@ -243,11 +242,167 @@ class Tracker_Object():
     def set_bounding_boxes(self, bounding_box):
         self.bounding_boxes = bounding_box
 
+sys.path.append('deep-person-reid/')
+from torchreid.utils import FeatureExtractor, re_ranking
+from torchreid.losses.hard_mine_triplet_loss import TripletLoss
+import torchreid.metrics as metrics
+
+import torch
+
+class Identity():
+    def __init__(self, features, identity, pca=False):
+        self.pca = pca
+        self.features = features
+        assert isinstance(identity,int)
+        self.identity = identity
+        self.images = []
+        self.features = [] #Convert this to a torch tensor
+        self.store_features(features) #Save the feature the identity was initiated
+        
+        
+    def store_image(self, image, max = 5, override=False):
+        # Store image in cache 
+        # WARNING: Will eat up memory if you store a lot of images
+        # Try to store only a maximum of 5 images at a time
+
+        if len(self.images) < max or override:
+            self.images.append(image)
+        else:
+            return False
+        return True
+    
+    def store_features(self, feature, max = 5, override=False):
+        # Store embeddings in cache 
+        # WARNING: Will eat up memory if you store a lot of images
+        # Try to store only a maximum of 5 images at a time
+
+        if len(self.features) < max or override:
+            self.features.append(feature)
+            if self.pca:
+                self.run_pca()
+        else:
+            return False
+        return True
+
+    def get_features(self, num=1):
+        #Return a number of features or just one
+        return self.features[:num]
+
+    def get_images(self):
+        return self.images
+
+    def get_identity(self):
+        return self.identity
+
+    def run_pca(self):
+        self.pca = pca_lowrank(self.features)
+
+class ReId_Object():
+    """
+    Contains all the methods for the ReIdentification 
+
+    Main method here is 
+    """
+
+    def __init__(self, triplet_loss_margin=0.3, pca=False, dist_metric='euclidean'):
+        F_EXTRACTOR = 'osnet_x1_0'
+        self.extractor = FeatureExtractor(model_name='osnet_x1_0')
+        self.triplet_loss = TripletLoss(margin=triplet_loss_margin)
+        #Empty numpy array of size (1,512)
+        self.device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+        self.identities = None
+        self.pca = pca
+        self.dist_metric = dist_metric
+
+    def load_model(self, model=None):
+        if self.model is None:
+            model_path =  CONFIG.get('reid', 'model')
+
+    
+    def is_new_identity(self, identity_feature, threshold=200):
+        # Checks if there are any similar identities in self.identities
+        # Return True if found similarity bigger than the threshold
+        # Return False if no similarity found
+
+        if self.identities is None:
+            return None
+        
+        dist_list = []
+        dist_metric='euclidean'
+        
+        for identity in self.identities:
+            feature = identity.get_features()[0]
+            try:
+                dist = metrics.compute_distance_matrix(feature, identity_feature,self.dist_metric)
+                dist_list.append(dist.item())
+            except Exception as e:
+                raise Exception(f'Could not compute distance matrix: {e}')
+            
+            if dist < threshold:
+                # Early return without evaluating other results
+                return identity.identity #return the first match
+
+        #If none are found then return False
+        return True
+
+    def rerank(self, qf):
+
+        gf = self.identities
+          
+        #TODO Implement reranking
+        print('Applying person re-ranking ...')
+        distmat_qq = metrics.compute_distance_matrix(qf, qf, self.dist_metric)
+        distmat_gg = metrics.compute_distance_matrix(gf, gf, self.dist_metric)
+        distmat = re_ranking(distmat, distmat_qq, distmat_gg)
+
+    def merge_similar_identities(self, threshold=200, rerank=False):
+        # Checks if there are any similar identities in self.identities
+        # If found similarity bigger than the threshold, delete the latter identity
+        pass
+
+    def get_features(self, frame):
+        # Predict the features from the frame
+        if frame is not None:
+            feature = self.extractor(frame)
+            return feature
+
+        else:
+            print('frame is none')
+            return None
+
+    def add_features(self, feature, identity_key):
+        identity = self.identities[identity_key]
+        identity.store_features(feature)
+
+    def add_identity(self, feature):
+        # Adds a new Identity(class) to the list of identities.
+        # Returns the identity number of the new identity
+
+        # Note:This function does not check   similarity between its nested objects
+        
+        if self.identities is None:
+            print("Creating new identity cache")
+            key = 0
+            self.identities =  [Identity(feature, key, pca=self.pca)]
+            return key
+        else: 
+            #Associate it with a max key
+            max_key = len(self.identities)
+            self.identities.append(Identity(feature, max_key, pca=self.pca))
+            print(f'Added new identity with key {max_key}')
+            return max_key
+
+        #     elif identity in self.identities.keys():
+        #         self.identities[identity] = torch.cat((self.identities[identity], feature), dim=0)
+        #         print(f'Added new feature to identity #{identity}')
+        #         return identity.get_identity()
+        
 class Video_Object():
     def __init__(self):
         self.np_frame = None
         self.bounding_boxes = []
         self.tracker_object = Tracker_Object()
+        self.reid_object = ReId_Object()
         
     def frame_gen(self, ndi_recv, draw = True, track = True):
         while True:
@@ -277,6 +432,10 @@ class Video_Object():
         if output is not None:
             print(output.get('xVelocity'), output.get('yVelocity'))
             self.bounding_boxes = self.tracker_object.get_bounding_boxes()
+    
+    def reid(self):
+        pass
+        
 
 # @app.post('/video_feed', include_in_schema=False)
 # def video_feed():

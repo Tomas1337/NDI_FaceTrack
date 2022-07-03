@@ -39,7 +39,7 @@ class DetectionWidget():
         self.f_tracker = None
 
         #Object Detectors
-        self.face_obj = FastMTCNN() #TRY THIS FIRST
+        self.face_obj = FastMTCNN()
         self.body_obj = Yolo_v4TINY()
 
         #Slider and button Values
