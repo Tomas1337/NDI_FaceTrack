@@ -88,8 +88,6 @@ class MovingObject(QGraphicsTextItem):
  
         orig_position = self.scenePos()
 
-<<<<<<< HEAD
-=======
 class MovingObject(QGraphicsTextItem):
     mouseReleaseSignal = Signal(int, int)
     def __init__(self, x ,y, scene_width, scene_height):
@@ -121,7 +119,6 @@ class MovingObject(QGraphicsTextItem):
  
         orig_position = self.scenePos()
 
->>>>>>> development
         updated_cursor_x = updated_cursor_position.x() - orig_cursor_position.x() + orig_position.x()
         updated_cursor_y = updated_cursor_position.y() - orig_cursor_position.y() + orig_position.y()
         
@@ -183,40 +180,6 @@ class GraphicView(QGraphicsView):
         (center_x, center_y) = self.moveObject._getPosition()
         self.mouseReleaseSignal.emit(center_x, center_y)
 
-<<<<<<< HEAD
-class DialogBox(): 
-    def __init__(self, mode = "info", text=None):
-        msg = QMessageBox()
-        msg.setWindowTitle("Error Encountered")
-        if mode == 'info':
-            msg.setIcon(QMessageBox.Information)
-            msg.setInformativeText("General Information Error 0")
-        elif mode == 'warning':
-            msg.setIcon(QMessageBox.Warning)
-            msg.setInformativeText("General Warning Error 0")
-        elif mode == 'critical':
-            msg.setIcon(QMessageBox.Critical)
-            msg.setInformativeText("Critical Error 0")
-
-        if text is None:
-            msg.setText("Error")
-            
-        
-        msg.setStandardButtons(QMessageBox.Ok)
-
-        self.msg = msg
-
-    def __call__(self, text=None, info_text=None):
-        if text is not None:
-            self.msg.setText(text)
-
-        if info_text is not None:
-            self.msg.setInformativeText(info_text)
-        self.msg.exec_()
-
-    def set_detailed_text(self, detailed_text):
-        self.msg.setDetailedText(detailed_text)
-=======
 def DialogBox():
    msgBox = QMessageBox()
    msgBox.setIcon(QMessageBox.Critical)
@@ -227,7 +190,6 @@ def DialogBox():
    returnValue = msgBox.exec()
    if returnValue == QMessageBox.Ok:
        print('OK clicked')
->>>>>>> development
 
 class QNameTag(QLineEdit):
     #Custom signal for a modified textEdited Signal that emits a list of [previous_str, new_string]
