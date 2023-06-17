@@ -61,3 +61,6 @@ facenet_pytorch/models/__pycache__/inception_resnet_v1.cpython-38.pyc
 facenet_pytorch/models/__pycache__/mtcnn.cpython-38.pyc
 facenet_pytorch/models/utils/__pycache__/detect_face.cpython-38.pyc
 facenet_pytorch/models/utils/__pycache__/training.cpython-38.pyc
+__pycache__/config.cpython-37.pyc
+__pycache__/config.cpython-38.pyc
+__pycache__/ndi_camera.cpython-38.pyc
