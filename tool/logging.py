@@ -2,10 +2,6 @@ import logging
 #Setup Logging
 
 class DuplicateFilter(logging.Filter):
-<<<<<<< HEAD
-
-=======
->>>>>>> development
     def filter(self, record):
         # add other fields if you need more granular comparison, depends on your app
         current_log = (record.module, record.levelno, record.msg)
@@ -30,10 +26,6 @@ def add_logger():
 
     logger.addHandler(c_handler)
     logger.addHandler(f_handler)
-<<<<<<< HEAD
-    logger.addFilter(DuplicateFilter()) 
-=======
     #logger.addFilter(DuplicateFilter()) 
->>>>>>> development
 
     return logger

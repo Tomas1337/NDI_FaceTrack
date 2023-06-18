@@ -3,7 +3,7 @@ import numpy as np
 import cv2 as cv
 import time
 import NDIlib as ndi
-import ptvsd
+# import ptvsd
 
 class ndi_camera:
     def __init__(self):
@@ -58,7 +58,7 @@ class ndi_camera:
         return ptz_list, self.sources
 
     def camera_connect(self, src=None, ndi_name=None, ndi_address=None):
-        ptvsd.debug_this_thread()
+        #ptvsd.debug_this_thread()
         """
         Connect to the camera and returns a connected NDI Receive Object
         Args:

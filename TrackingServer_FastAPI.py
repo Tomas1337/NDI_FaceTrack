@@ -5,7 +5,7 @@ from config import CONFIG
 from multiprocessing import Process
 from fastapi import FastAPI, File, Body, WebSocket
 from fastapi.responses import HTMLResponse, JSONResponse
-from fastapi.testclient import TestClient
+#from fastapi.testclient import TestClient
 from fastapi.openapi.utils import get_openapi
 from starlette.responses import StreamingResponse
 from pydantic import BaseModel

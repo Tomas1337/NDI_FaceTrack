@@ -14,11 +14,11 @@ from tool.pipeclient import PipeClient
 from tool.payloads import *
 from tool.utils import str2bool
 from tool.pyqtkeybind import keybinder
-from tool.identity_assist import IdentityAssistWindow
+#from tool.identity_assist import IdentityAssistWindow
 from turbojpeg import TurboJPEG
 from TrackingServer_FastAPI import main as app_main
 from multiprocessing import Process
-import ptvsd
+#import ptvsd
 
 class WinEventFilter(QAbstractNativeEventFilter):
     def __init__(self, keybinder):
@@ -96,14 +96,14 @@ class MainWindow(QMainWindow):
         self.sources = bar.addMenu("Sources")
         self.add_ons = bar.addMenu("Add-ons")
         self.addon_identity_assist = self.add_ons.addAction("Identity Assist")
-        self.addon_identity_assist.triggered.connect(self.identity_assist_window)
+        # self.addon_identity_assist.triggered.connect(self.identity_assist_window)
 
-    def identity_assist_window(self):
-        self.id_assist_window = IdentityAssistWindow(self)
-        self.id_assist_window.show()
-        self.vid_worker.IdentityAssistFrameSignal.connect(self.id_assist_window.get_keyframe)
-        #self.vid_worker.IdentityAssistFrameSignal.connect(self.test_slot)
-        self.id_assist_window.IdentityAssistEnableSignal.connect(self.vid_worker.detect_identity_assist_state)
+    # def identity_assist_window(self):
+    #     self.id_assist_window = IdentityAssistWindow(self)
+    #     self.id_assist_window.show()
+    #     self.vid_worker.IdentityAssistFrameSignal.connect(self.id_assist_window.get_keyframe)
+    #     #self.vid_worker.IdentityAssistFrameSignal.connect(self.test_slot)
+    #     self.id_assist_window.IdentityAssistEnableSignal.connect(self.vid_worker.detect_identity_assist_state)
 
     @Slot(np.ndarray)
     def test_slot(self, frame):
@@ -536,7 +536,7 @@ class Video_Object(QObject):
 
     @Slot(object)
     def read_video(self, ndi_object):
-        ptvsd.debug_this_thread()
+        #ptvsd.debug_this_thread()
         FRAME_WIDTH = 640
         FRAME_HEIGHT = 360
         self.ndi_recv = ndi_object
@@ -824,11 +824,11 @@ def main(args = None):
         pass
     else:
         retVal = DialogBox()
-        exit()
+        # exit()
         # @TODO: Start the server in the background
-        # print('Trying to start own Server')
-        # fastapi_process = Process(target = app_main)
-        # fastapi_process.start()
+        print('Trying to start own Server')
+        fastapi_process = Process(target = app_main)
+        fastapi_process.start()
 
             
     args_dict = vars(args)

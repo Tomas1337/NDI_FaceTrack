@@ -2,7 +2,7 @@ from face_tracking.camera_control import *
 from face_tracking.objcenter import *
 from tool.custom_widgets import *
 from config import CONFIG
-import dlib, time, styling, sys, cv2
+import time, cv2
 from tool.logging import add_logger
 from decimal import Decimal, getcontext
 import gc
@@ -154,26 +154,16 @@ class DetectionWidget():
         def extract_identity(frame: np.ndarray, bounding_box: list, face_flag: bool = True):
             # Is the boundingbox a body or face? Could be any object
             # If body, try to extract the face
-
             # If Face check if it's a frontal face (Using face alignment? Or using face feature score? Or how many keypoints are available?)
-            
             # Get Face embeddings
-
             # Push embedding to database
-
-            # Check
-
             def crop_boundingbox():
                 pass
-
             def check_frontal_face():
                 pass
-
             def get_face_embeddings():
                 pass
-            
             pass
-            
            # return (identity_embedding, identity_name,identity_type)
 
         ## CAMERA CONTROL
@@ -314,7 +304,7 @@ class DetectionWidget():
             if len(face_coords) > 0:
                 x,y,w,h = face_coords
             else:
-               return []
+                return []
 
             #Start a face tracker
             #self.f_tracker = cv2.TrackerKCF_create()
@@ -516,7 +506,7 @@ def tracker_main(Tracker, frame, custom_parameters = {}):
     return output
 
 logger = add_logger()
-  
+
 if __name__ == '__main__':
     
     FRAME_WIDTH = 640
@@ -527,4 +517,5 @@ if __name__ == '__main__':
     except NameError:
         Tracker = DetectionWidget()
         print('Starting new tracker?')
+    args = {}
     tracker_main(*args)
