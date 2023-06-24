@@ -3,6 +3,8 @@ import sys
 import cv2
 sys.path.append('.')
 from face_tracking.objcenter import *
+from face_tracking.camera_control import PTZ_Controller_Novel
+from decimal import Decimal
 class Detection():
     """
     Class object used for detecing tracking objects in the frame.
@@ -136,37 +138,37 @@ class Detection():
 
         self.set_tracked_coords(objX, objY)
         self.frame_count += 1
-        return (objX, objY)
 
-        #Convert to qimage then send to display to GUI
-        # self.image = self.get_qimage(frame)
-        # self.DisplayVideoSignal.emit(self.image)
+        # Convert to qimage then send to display to GUI
+        self.image = self.get_qimage(frame)
+        self.DisplayVideoSignal.emit(self.image)
 
-        ## CAMERA CONTROL
-        # x_controller = PTZ_Controller_Novel(self.focal_length, self.gamma)
-        # x_speed = x_controller.omega_tur_plus1(objX, centerX, RMin = 0.1)
+        # CAMERA CONTROL
+        x_controller = PTZ_Controller_Novel(self.focal_length, self.gamma)
+        x_speed = x_controller.omega_tur_plus1(objX, centerX, RMin = 0.1)
 
-        # y_controller = PTZ_Controller_Novel(self.focal_length, self.gamma)
-        # y_speed = y_controller.omega_tur_plus1(objY, centerY, RMin = 0.1, RMax=7.5)
+        y_controller = PTZ_Controller_Novel(self.focal_length, self.gamma)
+        y_speed = y_controller.omega_tur_plus1(objY, centerY, RMin = 0.1, RMax=7.5)
 
-        # x_speed = Decimal(self._pos_error_thresholding(W, x_speed, centerX, objX, self.xMinE)).quantize(Decimal("0.0001"))
-        # y_speed = Decimal(self._pos_error_thresholding(H, y_speed, centerY, objY, self.yMinE)).quantize(Decimal("0.0001"))
+        x_speed = Decimal(self._pos_error_thresholding(W, x_speed, centerX, objX, self.xMinE)).quantize(Decimal("0.0001"))
+        y_speed = Decimal(self._pos_error_thresholding(H, y_speed, centerY, objY, self.yMinE)).quantize(Decimal("0.0001"))
 
-        # if self.y_trackState is False:
-        #     y_speed = 0
+        if self.y_trackState is False:
+            y_speed = 0
 
-        # if (self.x_prev_speed == x_speed and 
-        #         self.y_prev_speed == y_speed and x_speed <= 0.15):
-        #     pass
+        if (self.x_prev_speed == x_speed and 
+                self.y_prev_speed == y_speed and x_speed <= 0.15):
+            pass
 
-        # else:
-        #     if self.sender().gui.face_track_button.isChecked() is True:
-        #         self.CameraControlSignal(x_speed, y_speed)
-        #     else:
-        #         self.CameraControlSignal(0.0, 0.0)
+        else:
+            if self.sender().gui.face_track_button.isChecked() is True:
+                self.CameraControlSignal(x_speed, y_speed)
+            else:
+                self.CameraControlSignal(0.0, 0.0)
             
-        # self.x_prev_speed = x_speed
-        # self.y_prev_speed = y_speed
+        self.x_prev_speed = x_speed
+        self.y_prev_speed = y_speed
+        return (objX, objY)
             
     def face_tracker(self, frame):
         if not self.f_tracker is None:

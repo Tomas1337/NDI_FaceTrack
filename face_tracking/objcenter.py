@@ -6,6 +6,8 @@ from facenet_pytorch import MTCNN
 from imutils.object_detection import non_max_suppression
 import os
 import time
+from tool.utils import timing_decorator
+
 CURR_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),".."))
 
 class FastMTCNN(object):
@@ -58,6 +60,7 @@ class FastMTCNN(object):
                 (x,y,x2,y2) = boxes[np.argmax(results)]
             else:
                 return []
+            
         else:
             return []
 
@@ -67,13 +70,14 @@ class FastMTCNN(object):
         boxes = [x,y,w,h]
         return boxes
 
-    
+    @timing_decorator
     def get_all_locations(self, frame, minConf = 0.6):
+        start_time = time.time()
         if self.resize != 1:
             frame = cv2.resize(frame, (int(frame.shape[1] * self.resize), int(frame.shape[0] * self.resize)))
         boxes, results = self.mtcnn.detect(frame, landmarks=False)
         print('Running a MTCNN All')
-        #print('Face Detection Inference is: {}'.format(time.time()-start_time))
+        print(f'Face Detection Inference is: {time.time()-start_time}. Return: {boxes} faces')
         if boxes is None:
             return []
         elif len(boxes) > 0:
@@ -88,7 +92,7 @@ class Yolov3(object):
 
     def __init__(self):
         np.random.seed(42)
-        weightsPath = "models/yolov3-tiny-prn.weights"
+        weightsPavth = "models/yolov3-tiny-prn.weights"
         configPath = "models/yolov3-tiny-prn.cfg"
         labelsPath = "models/coco.names"
         self.LABELS = open(labelsPath).read().strip().split("\n")

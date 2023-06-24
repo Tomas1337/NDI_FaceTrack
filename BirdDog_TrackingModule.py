@@ -6,6 +6,7 @@ import time, cv2
 from tool.logging import add_logger
 from decimal import Decimal, getcontext
 import gc
+from collections import deque
 
 # def handle_exception(exc_type, exc_value, exc_traceback):
 #     if issubclass(exc_type, KeyboardInterrupt):
@@ -63,6 +64,16 @@ class DetectionWidget():
         #Speed Tracker
         self.x_prev_speed = None
         self.y_prev_speed = None
+        
+        # Maintain a history of recent speeds for both x_speed and y_speed.
+        self.x_speed_history = deque(maxlen=60)  # Store last 60 frames
+        self.y_speed_history = deque(maxlen=60)  # Store last 60 frames
+        
+    def is_valid_coords(self, coords):
+        """
+        This function checks whether the coords can be unpacked to x, y, w, h.
+        """
+        return coords is not None and len(coords) == 4
 
     def main_track(self, frame):
         """
@@ -82,8 +93,6 @@ class DetectionWidget():
         (H, W) = frame.shape[:2]
         centerX = self.target_coordinate_x
         centerY = self.target_coordinate_y
-        objX = centerX
-        objY = centerY
         
         #Trackers
 
@@ -104,21 +113,17 @@ class DetectionWidget():
             #Body Only
             body_coords = self.body_tracker(frame)
 
-        try:
-            x,y,w,h = face_coords
-            self.track_coords = [x,y,x+w,y+h]
-            #self.info_status.emit('Tracking Face')
+        if self.is_valid_coords(face_coords):
+            x, y, w, h = face_coords
+            self.track_coords = [x, y, x + w, y + h]
             face_track_flag = True
-        except (ValueError, TypeError, UnboundLocalError) as e:
-            try:
-                x,y,w,h = body_coords
-                self.track_coords = [x,y,x+w,y+h]
-                #self.info_status.emit('Tracking Body')
-                self.overlap_counter = 0
-            except (ValueError, UnboundLocalError) as e:
-                pass
-            finally:
-                face_track_flag = False
+        elif self.is_valid_coords(body_coords):
+            x, y, w, h = body_coords
+            self.track_coords = [x, y, x + w, y + h]
+            self.overlap_counter = 0
+            face_track_flag = False
+        else:
+            face_track_flag = False
         
         offset_value = int(self.body_y_offset_value * (H/100))
 
@@ -129,42 +134,28 @@ class DetectionWidget():
             objY = int(y+(y2-y)//2) if face_track_flag else int(y + offset_value)
             self.last_loc = (objX, objY)
             self.lost_tracking = 0
-
-        #Initiate Lost Tracking sub-routine
-        #@TODO: Improve the lost tracking sub-routine
         else:
-            if self.lost_tracking > 100 and self.lost_tracking < 500:
-                self.info_status("Lost Tracking Sequence Secondary")
+            objX = self.target_coordinate_x
+            objY = self.target_coordinate_y
+    
+        # #Initiate Lost Tracking sub-routine
+        # else:
+        #     if self.lost_tracking > 100 and self.lost_tracking < 500:
+        #         self.info_status("Lost Tracking Sequence Secondary")
 
-            elif self.lost_tracking < 20:
-                objX = self.last_loc[0]
-                objY = self.last_loc[1]
-                self.lost_tracking += 1
-                self.info_status("Lost Tracking Sequence Initial")
+        #     elif self.lost_tracking < 20:
+        #         objX = self.last_loc[0]
+        #         objY = self.last_loc[1]
+        #         self.lost_tracking += 1
+        #         self.info_status("Lost Tracking Sequence Initial")
 
-            else:
-                objX = centerX
-                objY = centerY
-                self.info_status('Lost object. Centering')
-                self.lost_tracking += 1
-                if self.lost_tracking < 500 and self.lost_tracking%100:
-                    self.b_tracker = None
-
-        @staticmethod
-        def extract_identity(frame: np.ndarray, bounding_box: list, face_flag: bool = True):
-            # Is the boundingbox a body or face? Could be any object
-            # If body, try to extract the face
-            # If Face check if it's a frontal face (Using face alignment? Or using face feature score? Or how many keypoints are available?)
-            # Get Face embeddings
-            # Push embedding to database
-            def crop_boundingbox():
-                pass
-            def check_frontal_face():
-                pass
-            def get_face_embeddings():
-                pass
-            pass
-           # return (identity_embedding, identity_name,identity_type)
+        #     else:
+        #         objX = centerX
+        #         objY = centerY
+        #         self.info_status('Lost object. Centering')
+        #         self.lost_tracking += 1
+        #         if self.lost_tracking < 500 and self.lost_tracking%100:
+        #             self.b_tracker = None
 
         ## CAMERA CONTROL
         x_controller = PTZ_Controller_Novel(self.focal_length, self.gamma)
@@ -182,7 +173,27 @@ class DetectionWidget():
 
         self.x_prev_speed = x_speed
         self.y_prev_speed = y_speed
+        
+        ## Lets add some probablistic smoothing
+        # Add the new speed to the history.
+        self.x_speed_history.append(x_speed)
+        self.y_speed_history.append(y_speed)
 
+        # Calculate the mean and standard deviation of these histories.
+        x_mean = np.mean(self.x_speed_history)
+        x_std = np.std(self.x_speed_history)
+        y_mean = np.mean(self.y_speed_history)
+        y_std = np.std(self.y_speed_history)
+
+        # If the current speed is more than a certain number of standard deviations away from the mean, ignore it.
+        threshold = 2  # Adjust as needed.
+        if abs(x_speed - x_mean) > threshold * x_std:
+            x_speed = self.x_prev_speed  # Ignore the calculated speed.
+
+        if abs(y_speed - y_mean) > threshold * y_std:
+            y_speed = self.y_prev_speed  # Ignore the calculated speed.
+
+        print(f"Speed has been dampened from {self.x_prev_speed} to {x_speed} and {self.y_prev_speed} to {y_speed} by proib")
         return (x_speed, y_speed)
 
     def get_bounding_boxes(self):
@@ -252,23 +263,37 @@ class DetectionWidget():
             Add to the lost face count
             When face Count reaches N, it empties the face_tracker
         """
-        if not self.f_tracker is None:
+        if self.f_tracker:
             ok, position = self.f_tracker.update(frame)
-            if self.frame_count % 300== 0:
-                self.lost_tracking_count -= 1
+            
+            if self.frame_count % 300 == 0:
+                if self.lost_tracking_count > 0: # Prevent from going negative
+                    self.lost_tracking_count -= 1
+                    
                 logger.debug(f'Running a {(300/30)}s check')
-                test_coords = self.face_obj.get_all_locations(frame)
+                pred_coords = self.face_obj.get_all_locations(frame)
 
-                if len(test_coords) > 0: #There are detections
-                    for i, j in enumerate(test_coords):
-                        if self.overlap_metric(j, self.face_coords) >= 0.75:
-                            x,y,w,h = j
-                            break
-                    return []
-
-                else: #No detections
-                    self.f_tracker = None
-                    return []
+                if pred_coords is not None and len(pred_coords) > 0: #There are detections
+                    max_overlap = 0
+                    for i, j in enumerate(pred_coords):
+                        overlap = self.overlap_metric(j, self.face_coords)
+                        if overlap > max_overlap:
+                            max_overlap = overlap
+                            x, y, w, h = j
+                    
+                    if max_overlap >= 0.50:
+                        self.face_coords = [x, y, w, h] # Update face_coords if a sufficient overlap is found
+                        return x, y, w, h
+                    
+                    else:
+                        print(f"Overlap is {max_overlap}. Refreshing Face Detector")
+                        self.f_tracker = None
+                        return []
+                
+                else:
+                        print(f"No detections in the body frame. Refreshing Face Detector")
+                        self.f_tracker = None
+                        return []
             
             elif ok:
                 x = int(position[0])
@@ -284,7 +309,7 @@ class DetectionWidget():
                 self.lost_tracking_count += 1
                 if self.f_track_count > 5:
                     logger.debug('Lost face') 
-                    self.info_status('Refreshing Face Detector')     
+                    self.info_status('Refreshing Face Detector from Lost Tracking')     
                     self.f_tracker = None
                     return []
                 else:

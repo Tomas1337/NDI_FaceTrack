@@ -148,21 +148,30 @@ class MovingObject(QGraphicsTextItem):
         return (self.center_x, self.center_y)
 
 class GraphicView(QGraphicsView):
+    # This is Frame where the moving object moves around in
     mouseReleaseSignal = Signal(int, int)
+    
     def __init__(self, parent):
         super(GraphicView, self).__init__(parent)
- 
+        self.parent = parent
+        self.w_parent = parent.parent().parent()
         self.scene = QGraphicsScene()
         self.setAlignment(Qt.AlignCenter)
         self.setScene(self.scene)
         
-        width = parent.parent().parent().size().width()
-        height = parent.frameGeometry().height() 
+        width = self.w_parent.size().width()
+        # height = parent.frameGeometry().height() 
+        #width = 900
+        height = 360
         center = (width/2, height/2)
         print("Center {}".format(center))
+        
+        self.updatePosition()
 
         self.setSceneRect(0, 0, width, height)
-        #self.setStyleSheet("background-color: #1c2e66;")
+        self.setStyleSheet("background-color: #1c2e66;")
+        #Add some alpha
+        #self.setStyleSheet("background-color: rgba(28, 46, 102, 0.5);")
         self.setStyleSheet("background:transparent;")
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
@@ -170,15 +179,58 @@ class GraphicView(QGraphicsView):
         self.mouseReleaseSignal.connect(self.moveObject.mouseReleaseEvent)
 
         self.scene.addItem(self.moveObject)
-        self.move(21,21) #Manual move since it wont center properly
+        self.move(0,0)
+        #self.move(21,21) #Manual move since it wont center properly
 
     def getPosition(self):
         (center_x, center_y) = self.moveObject._getPosition()
         return (center_x, center_y)
     
+    def updatePosition(self):
+        parent = self.w_parent
+        if parent is not None:
+            width = parent.size().width() 
+            height = parent.size().height() 
+            self.setSceneRect(0, 0, width, height)
+
+            # Position the GraphicView at the center of the parent widget
+            x = (parent.width() - self.width()) / 2
+            y = (parent.height() - self.height()) / 2
+            margin_y = parent.layout().contentsMargins().top()
+            self.move(0,60)
+
+            
+    def updateSize(self):
+        if self.w_parent is not None:
+            width = 640#self.w_parent.size().width() 
+            height = 360#self.w_parent.size().height() 
+            center = (width/2, height/2)
+            self.setSceneRect(0, 0, width, height)
+            self.moveObject = MovingObject(center[0], center[1], width, height)
+
     def mouseReleaseEvent(self, e):
         (center_x, center_y) = self.moveObject._getPosition()
         self.mouseReleaseSignal.emit(center_x, center_y)
+        self.updateSize()
+        self.updatePosition()
+
+        
+    def centerInView(self):
+        # Center the GraphicView in the parent
+        parent = self.w_parent
+        if parent is not None:
+            width = parent.frameGeometry().width()
+            height = parent.frameGeometry().height()
+            self.setSceneRect(0, 0, width, height)
+            #self.move((width - self.width()) / 2, (height - self.height()) / 2)
+            
+    def resizeEvent(self, event):
+        # When the GraphicView is resized, re-center it in the parent
+        super(GraphicView, self).resizeEvent(event)
+        print(f"Resized to: {event.size()}")
+        self.updateSize()
+        self.updatePosition()
+        
 
 def DialogBox():
    msgBox = QMessageBox()

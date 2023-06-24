@@ -62,7 +62,8 @@ class MainWindow(QMainWindow):
         self.gui.show()
         screen_size = QApplication.primaryScreen().size()
         #1920 1080 width height (700, 660) 
-        width = int(screen_size.width() * 0.365)
+        width = int(screen_size.width() * 0.365) # This should have a maximum width to account for ultra wide screens
+        width = 800 if width > 800 else width
         height = int(screen_size.height() * 0.60)
         self.setFixedSize(width, height)
         self.ida_counter = 0
@@ -144,7 +145,6 @@ class MainWindow(QMainWindow):
         self.vid_worker.DisplayNormalVideoSignal.connect(self.gui.setImage)
         self.vid_worker.FPSSignal.connect(self.gui.updateFPS)
         
-
         self.face_detector.CameraZoomControlSignal.connect(self.vid_worker.zoom_camera_control)
         self.face_detector.DisplayVideoSignal.connect(self.gui.setImage)
         self.face_detector.CameraControlSignal.connect(self.vid_worker.camera_control)
@@ -230,7 +230,7 @@ class MainWindow(QMainWindow):
 class WindowGUI(QWidget):
     def __init__(self, parent, args):
         super(WindowGUI, self).__init__(parent)
-        self.label_status = QLabel('Created by: JTJTi Digital Video + Radio', self)
+        self.label_status = QLabel('Created by: Tomas Lastrilla', self)
         
         #Main Track Button
         self.face_track_button = QTrackingButton('TRACK')
@@ -242,12 +242,15 @@ class WindowGUI(QWidget):
         screen_size = QApplication.primaryScreen().size()
         height = screen_size.height()
         width = screen_size.width()
+        width = 800 if width > 800 else width
         self.video_frame.setFixedHeight(int(height*0.33))
         self.video_frame.setMinimumWidth(int(width*0.355))   
         self.video_frame.setAutoFillBackground(True)
-        self.video_frame.setStyleSheet("background-color:#000000;")
+        self.video_frame.setStyleSheet("background-color:#;")
         self.video_frame.setAlignment(Qt.AlignCenter)
-        self.video_frame.setMargin(10)
+        # self.video_frame.setMargin(10)
+        # Print info about the video_frame size
+        print(f'Video Frame Size: {self.video_frame.size()}')
 
         #Home Position Draggable
         self.home_pos = GraphicView(self.video_frame)
@@ -333,7 +336,6 @@ class WindowGUI(QWidget):
 
         controls_layout = QGridLayout(self)
         controls_layout.setSpacing(10)
-        #   controls_layout.setFixedHeight(200)
         vid_layout.addWidget(self.info_panel)
         vid_layout.addWidget(self.video_frame)
         vid_layout.setAlignment(self.video_frame, Qt.AlignCenter)
@@ -495,7 +497,7 @@ class CameraObject(QObject):
         try:
             ndi.recv_ptz_pan_tilt_speed(self.ndi_recv, Xspeed, Yspeed)
             self.camera_control_sent_signal.emit(Xspeed, Yspeed)
-            #print(f'Camera Control X:{Xspeed}  Y:{Yspeed}')
+            print(f'Camera Control X:{Xspeed}  Y:{Yspeed}')
 
         except AttributeError:
             self.camera_control_sent_signal.emit(Xspeed, Yspeed)
@@ -533,6 +535,7 @@ class Video_Object(QObject):
     @Slot()
     def stop_read_video(self):
         self.read_video_flag = False
+        ndi.recv_ptz_pan_tilt_speed(self.ndi_recv, 0, 0)
 
     @Slot(object)
     def read_video(self, ndi_object):
@@ -597,7 +600,7 @@ class Video_Object(QObject):
         self.DisplayNormalVideoSignal.emit(image)
 
     @Slot(float, float)
-    def camera_control(self, Xspeed, Yspeed):
+    def camera_control(self, Xspeed, Yspeed, repeat=2):
         """
         Function to send out the X-Y Vectors to the camera directly
         The loop helps the control of how many times the vectors are sent in one call
@@ -605,8 +608,10 @@ class Video_Object(QObject):
         Args:
             Xspeed (float): X-Vector to send to camera
             Yspeed (float): Y-Vector to send to camera
+            Repeat (int, optional): Number of times to send the vectors to the NDI. Defaults to 2.
         """
-        for i in range(1,2):
+        for i in range(1,repeat):
+            print(f'Camera Control X:{Xspeed}  Y:{Yspeed} Repeat:{i}')
             ndi.recv_ptz_pan_tilt_speed(self.ndi_recv, Xspeed, Yspeed)
         #ndi.recv_ptz_pan_tilt_speed(self.ndi_recv, 0, 0)
 
@@ -619,6 +624,9 @@ class Video_Object(QObject):
         ndi.recv_ptz_zoom(self.ndi_recv, ZoomLevel/10)
 
 class FaceDetectionWidget(QObject):
+    """
+    Component of the GUI Module that handles the interaction between control layer and tracking layer (to the server)
+    """
     DisplayVideoSignal = Signal(QImage)
     CameraControlSignal = Signal(float, float)
     CameraZoomControlSignal = Signal(float)
@@ -646,7 +654,7 @@ class FaceDetectionWidget(QObject):
         """
         Does a read and write to Server through a FIFO Pipe
         Args:
-          frame (np.ndarray): image frame sent to the server,
+        frame (np.ndarray): image frame sent to the server,
         """
         #Sending using Pydantic payloads
         parameter_payload = PipeClient_Parameter_Payload(target_coordinate_x = self.center_coords[0],
@@ -672,7 +680,7 @@ class FaceDetectionWidget(QObject):
         else:
             response = pickle.loads(response_pickled)
     
-        print(f'Response from pipe is {response}')
+        #print(f'Response from pipe is {response} meme')
 
         #Display frame
         if response.x is not None:
@@ -680,9 +688,11 @@ class FaceDetectionWidget(QObject):
             boundingBox = (bB[0],bB[1],bB[2]-bB[0],bB[3]-bB[1])
         else:
             boundingBox = None
-            return
+            #return
         
         self.displayFrame(frame, boundingBox)
+        # Emit the signal of the x_velocity and y_velocity via the CameraControlSignal
+        self.CameraControlSignal.emit(response.x_velocity, response.y_velocity)
 
     @Slot(bool)
     def pipeStart(self, state=True):
@@ -700,6 +710,7 @@ class FaceDetectionWidget(QObject):
             self.pipeClient.createPipeHandle(pipeName)
            
         else:
+            self.CameraControlSignal.emit(0.0,0.0)
             self.pipeClient.pipeClose()
 
     def displayFrame(self, frame, boundingBox):
@@ -823,7 +834,7 @@ def main(args = None):
     if check_server():
         pass
     else:
-        retVal = DialogBox()
+        #retVal = DialogBox()
         # exit()
         # @TODO: Start the server in the background
         print('Trying to start own Server')
@@ -866,3 +877,4 @@ jpeg = TurboJPEG()
 
 if __name__ == '__main__':
     main()
+
