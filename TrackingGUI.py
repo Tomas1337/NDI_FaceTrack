@@ -7,7 +7,7 @@ from ndi_camera import ndi_camera
 from tool.logging import add_logger
 import numpy as np
 import NDIlib as ndi
-import cv2, dlib, time, styling, sys, keyboard, os, struct, requests, warnings, argparse, logging, pickle
+import cv2, time, styling, sys, os, struct, requests, warnings, argparse, logging, pickle
 from tool.custom_widgets import *
 from config import CONFIG
 from tool.pipeclient import PipeClient 
@@ -15,7 +15,7 @@ from tool.payloads import *
 from tool.utils import str2bool
 from tool.pyqtkeybind import keybinder
 #from tool.identity_assist import IdentityAssistWindow
-from turbojpeg import TurboJPEG
+#from turbojpeg import TurboJPEG
 from TrackingServer_FastAPI import main as app_main
 from multiprocessing import Process
 #import ptvsd
@@ -497,7 +497,7 @@ class CameraObject(QObject):
         try:
             ndi.recv_ptz_pan_tilt_speed(self.ndi_recv, Xspeed, Yspeed)
             self.camera_control_sent_signal.emit(Xspeed, Yspeed)
-            print(f'Camera Control X:{Xspeed}  Y:{Yspeed}')
+            #print(f'Camera Control X:{Xspeed}  Y:{Yspeed}')
 
         except AttributeError:
             self.camera_control_sent_signal.emit(Xspeed, Yspeed)
@@ -611,7 +611,7 @@ class Video_Object(QObject):
             Repeat (int, optional): Number of times to send the vectors to the NDI. Defaults to 2.
         """
         for i in range(1,repeat):
-            print(f'Camera Control X:{Xspeed}  Y:{Yspeed} Repeat:{i}')
+            #print(f'Camera Control X:{Xspeed}  Y:{Yspeed} Repeat:{i}')
             ndi.recv_ptz_pan_tilt_speed(self.ndi_recv, Xspeed, Yspeed)
         #ndi.recv_ptz_pan_tilt_speed(self.ndi_recv, 0, 0)
 
@@ -669,13 +669,18 @@ class FaceDetectionWidget(QObject):
                                                         reset_trigger = self.reset_trigger)
 
         self.pipeClient.writeToPipe(payload = parameter_payload.pickle_object())
-        image_payload = PipeClient_Image_Payload(frame = jpeg.encode(frame))
+        
+        #image_payload = PipeClient_Image_Payload(frame = jpeg.encode(frame))
+        is_success, im_buf_arr = cv2.imencode(".jpg", frame)
+        byte_im = im_buf_arr.tobytes()
+        
+        image_payload = PipeClient_Image_Payload(frame = byte_im)
         self.reset_trigger = False
         self.pipeClient.writeToPipe(payload = image_payload.pickle_object())
 
         #Receiving pickled Pydantic payloads
         response_pickled = self.pipeClient.readFromPipe()
-        if response_pickled == b'':
+        if response_pickled == b'' or response_pickled == None:
             response = None
         else:
             response = pickle.loads(response_pickled)
@@ -683,16 +688,17 @@ class FaceDetectionWidget(QObject):
         #print(f'Response from pipe is {response} meme')
 
         #Display frame
-        if response.x is not None:
+        if response and response.x is not None:
             bB = [response.x, response.y, response.w, response.h]
             boundingBox = (bB[0],bB[1],bB[2]-bB[0],bB[3]-bB[1])
+            # Emit the signal of the x_velocity and y_velocity via the CameraControlSignal
+            self.CameraControlSignal.emit(response.x_velocity, response.y_velocity)
         else:
             boundingBox = None
-            #return
-        
         self.displayFrame(frame, boundingBox)
-        # Emit the signal of the x_velocity and y_velocity via the CameraControlSignal
-        self.CameraControlSignal.emit(response.x_velocity, response.y_velocity)
+
+        
+        
 
     @Slot(bool)
     def pipeStart(self, state=True):
@@ -873,7 +879,7 @@ def main(args = None):
     sys.exit(app.exec_())
 
 logger = add_logger()
-jpeg = TurboJPEG()
+#jpeg = TurboJPEG()
 
 if __name__ == '__main__':
     main()
