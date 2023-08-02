@@ -4,7 +4,7 @@ from PySide2.QtGui import QKeySequence, QImage, QPixmap, QPainter, QBrush, QFont
 from face_tracking.objcenter import *
 from face_tracking.camera_control import *
 from ndi_camera import ndi_camera
-from tool.logging import add_logger
+from tool.info_logging import add_logger
 import numpy as np
 import NDIlib as ndi
 import cv2, time, styling, sys, os, struct, requests, warnings, argparse, logging, pickle

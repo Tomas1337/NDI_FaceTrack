@@ -3,7 +3,7 @@ from face_tracking.objcenter import *
 from tool.custom_widgets import *
 from config import CONFIG
 import time, cv2
-from tool.logging import add_logger
+from tool.info_logging import add_logger
 from decimal import Decimal
 from collections import deque
 

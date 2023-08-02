@@ -21,7 +21,18 @@
             "request": "launch",
             "program": "TrackingGUI.py",
             "console": "integratedTerminal",
-            "python": "${command:python.interpreterPath}"
+            //"python": "${command:python.interpreterPath}"
+            "python": "C:/Projects/NDI_FaceTrack/.venv0624/Scripts/python.exe"
+        },
+        {
+            "name": "TrackingServer FastAPI",
+            "type": "python",
+            "request": "launch",
+            "program": "TrackingServer_FastAPI.py",
+            "console": "integratedTerminal",
+            //"python": "${command:python.interpreterPath}"
+            "python": "C:/Projects/NDI_FaceTrack/.venv0703torchGPU/Scripts/python.exe",
+            //"args": ["--reload","True"]
         },
         {
             "name": "Hidden UI",
@@ -41,6 +52,17 @@
             "program": "TrackingGUI.py",
             "console": "integratedTerminal",
             "args": ["--name","DESKTOP-C16VMFB (VLC)","--enable_console", "True", "--logging", "True"], 
+            //"args": ["--enable_console", "False", "--logging", "True"], 
+            "python": "${command:python.interpreterPath}"
+            
+        },
+        {
+            "name": "Create Training Data",
+            "type": "python",
+            "request": "launch",
+            "program": "tool/train_yolov8_bodyface.py",
+            "console": "integratedTerminal",
+            // "args": ["--name","DESKTOP-C16VMFB (VLC)","--enable_console", "True", "--logging", "True"], 
             //"args": ["--enable_console", "False", "--logging", "True"], 
             "python": "${command:python.interpreterPath}"
             

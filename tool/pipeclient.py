@@ -12,6 +12,7 @@ sys.path.insert(0, 'tool')
 class PipeClient:
     def __init__(self, parent = None):
         #self.pipeRequest("http://127.0.0.1:8000/api/start_pipe_server")
+        self.pipe_handle = None
         pass
 
     def pipeRequest(self, url, content = None):
@@ -64,12 +65,12 @@ class PipeClient:
 
             
     def readFromPipe(self):
-        bufSize = 4096
-        win32file.SetFilePointer(self.pipe_handle, 0, win32file.FILE_BEGIN)
-        result, data = win32file.ReadFile(self.pipe_handle, bufSize, None) 
-        buf = data
-
+        r=None
         try:
+            bufSize = 4096
+            win32file.SetFilePointer(self.pipe_handle, 0, win32file.FILE_BEGIN)
+            result, data = win32file.ReadFile(self.pipe_handle, bufSize, None) 
+            buf = data
             while len(data) == bufSize:            
                 result, data = win32file.ReadFile(self.pipe_handle, bufSize, None)
                 buf += data
@@ -93,9 +94,10 @@ class PipeClient:
         return img_byte_arr
 
     def pipeClose(self):
-        win32file.CloseHandle(self.pipe_handle)
-        print("Pipe has been closed from client")
-
+        if self.pipe_handle:
+            win32file.CloseHandle(self.pipe_handle)
+            print("Pipe has been closed from client")
+        
     def checkPipe(self, pipe_handle = None):
         """Checks if pipe at fileHandle is open
         Args:
