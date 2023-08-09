@@ -4,21 +4,21 @@ from PySide2.QtGui import QKeySequence, QImage, QPixmap, QPainter, QBrush, QFont
 from face_tracking.objcenter import *
 from face_tracking.camera_control import *
 from ndi_camera import ndi_camera
-from tool.logging import add_logger
+from tool.info_logging import add_logger
 import numpy as np
 import NDIlib as ndi
-import cv2, dlib, time, styling, sys, keyboard, os, struct, requests, warnings, argparse, logging, pickle
+import cv2, time, styling, sys, os, struct, requests, warnings, argparse, logging, pickle
 from tool.custom_widgets import *
 from config import CONFIG
 from tool.pipeclient import PipeClient 
 from tool.payloads import *
 from tool.utils import str2bool
 from tool.pyqtkeybind import keybinder
-#from tool.identity_assist import IdentityAssistWindow
-from turbojpeg import TurboJPEG
 from TrackingServer_FastAPI import main as app_main
 from multiprocessing import Process
-#import ptvsd
+import debugpy
+debugpy.listen(("localhost", 5678))
+debugpy.wait_for_client()
 
 class WinEventFilter(QAbstractNativeEventFilter):
     def __init__(self, keybinder):
@@ -99,13 +99,6 @@ class MainWindow(QMainWindow):
         self.addon_identity_assist = self.add_ons.addAction("Identity Assist")
         # self.addon_identity_assist.triggered.connect(self.identity_assist_window)
 
-    # def identity_assist_window(self):
-    #     self.id_assist_window = IdentityAssistWindow(self)
-    #     self.id_assist_window.show()
-    #     self.vid_worker.IdentityAssistFrameSignal.connect(self.id_assist_window.get_keyframe)
-    #     #self.vid_worker.IdentityAssistFrameSignal.connect(self.test_slot)
-    #     self.id_assist_window.IdentityAssistEnableSignal.connect(self.vid_worker.detect_identity_assist_state)
-
     @Slot(np.ndarray)
     def test_slot(self, frame):
         print(f'frame received with shape of {frame.shape}')
@@ -128,7 +121,7 @@ class MainWindow(QMainWindow):
         self.vid_worker_thread = QThread()
         self.vid_worker.moveToThread(self.vid_worker_thread)
 
-        self.face_detector = FaceDetectionWidget()
+        self.face_detector = DetectionWidget()
         self.face_detector.moveToThread(self.vid_worker_thread)
         self.vid_worker_thread.start()
 
@@ -164,9 +157,7 @@ class MainWindow(QMainWindow):
         self.gui.face_track_button.toggled.connect(self.face_detector.pipeStart)
 
         self.gui.reset_default_button.clicked.connect(self.gui.reset_defaults_handler)
-        self.gui.home_pos.mouseReleaseSignal.connect(self.face_detector.getTrackPosition)
-        self.gui.reset_default_button.clicked.connect(self.gui.reset_defaults_handler)
-        self.gui.home_pos.mouseReleaseSignal.connect(self.face_detector.getTrackPosition)
+        self.gui.home_pos.mouseReleaseSignal.connect(self.face_detector.setTrackPosition)
 
         self.preset_camera_signal.connect(self.camera.connect_to_preset_camera)
         self.gui.face_track_button.clicked.connect(lambda state: self.camera.camera_control(0.0,0.0))
@@ -182,7 +173,6 @@ class MainWindow(QMainWindow):
 
     def keyPressEvent(self, event):
         super(MainWindow, self).keyPressEvent(event)
-        logger.debug(f'pressed from MainWindow: {event.key()}')
 
         key_dict_track_type = {49:0, 50:1, 51:2} #Keys 1,2 and 3
         key_dict_camera_zoom = { Qt.Key_Q: -1,
@@ -464,7 +454,6 @@ class CameraObject(QObject):
 
     @Slot(int)
     def connect_to_camera(self, cam_num):
-        #ptvsd.debug_this_thread()
         self.signalStatus.emit('Connecting to camera') 
         self.ndi_recv = self.ndi_cam.camera_connect(ndi_name=self.sender().text())
         self.signalStatus.emit('Connected to {}'.format(self.ptz_names[cam_num]))
@@ -485,7 +474,6 @@ class CameraObject(QObject):
 
     @Slot(float, float)
     def camera_control(self, Xspeed: float, Yspeed: float):
-        #ptvsd.debug_this_thread()
         """
         Function to send out the X-Y Vectors to the camera directly
         The loop helps the control of how many times the vectors are sent in one call
@@ -499,10 +487,10 @@ class CameraObject(QObject):
             self.camera_control_sent_signal.emit(Xspeed, Yspeed)
             print(f'Camera Control X:{Xspeed}  Y:{Yspeed}')
 
-        except AttributeError:
+        except AttributeError as attrbex:
             self.camera_control_sent_signal.emit(Xspeed, Yspeed)
             logger.warning('WASD - QE does not work since there is no connected source')
-            #print(f'Camera Control X:{Xspeed}  Y:{Yspeed}')
+            print(f'Camera Control X:{Xspeed}  Y:{Yspeed}: Warning: {attrbex}')
         
     @Slot(float)
     def camera_zoom_control(self, zoom_speed: float):
@@ -539,7 +527,6 @@ class Video_Object(QObject):
 
     @Slot(object)
     def read_video(self, ndi_object):
-        #ptvsd.debug_this_thread()
         FRAME_WIDTH = 640
         FRAME_HEIGHT = 360
         self.ndi_recv = ndi_object
@@ -564,8 +551,6 @@ class Video_Object(QObject):
                 #Code to process the GUI events before proceeding. This is for writing the bitmap to the picturebox
                 QApplication.processEvents()
 
-                camera_move_speed = CONFIG.getfloat('camera_control', 'camera_move_speed')
-                camera_zoom_speed = CONFIG.getfloat('camera_control', 'camera_zoom_speed')
 
                 if self.face_track_state == False:
                     self.display_plain_video(frame)
@@ -600,7 +585,7 @@ class Video_Object(QObject):
         self.DisplayNormalVideoSignal.emit(image)
 
     @Slot(float, float)
-    def camera_control(self, Xspeed, Yspeed, repeat=2):
+    def camera_control(self, Xspeed, Yspeed, repeat=3):
         """
         Function to send out the X-Y Vectors to the camera directly
         The loop helps the control of how many times the vectors are sent in one call
@@ -611,9 +596,9 @@ class Video_Object(QObject):
             Repeat (int, optional): Number of times to send the vectors to the NDI. Defaults to 2.
         """
         for i in range(1,repeat):
-            print(f'Camera Control X:{Xspeed}  Y:{Yspeed} Repeat:{i}')
+            #print(f'Camera Control X:{Xspeed}  Y:{Yspeed} Repeat:{i}')
             ndi.recv_ptz_pan_tilt_speed(self.ndi_recv, Xspeed, Yspeed)
-        #ndi.recv_ptz_pan_tilt_speed(self.ndi_recv, 0, 0)
+        ndi.recv_ptz_pan_tilt_speed(self.ndi_recv, 0, 0)
 
     @Slot(float)
     def zoom_camera_control(self, zoom_value):
@@ -623,7 +608,7 @@ class Video_Object(QObject):
     def zoom_handler(self, ZoomLevel):
         ndi.recv_ptz_zoom(self.ndi_recv, ZoomLevel/10)
 
-class FaceDetectionWidget(QObject):
+class DetectionWidget(QObject):
     """
     Component of the GUI Module that handles the interaction between control layer and tracking layer (to the server)
     """
@@ -658,41 +643,45 @@ class FaceDetectionWidget(QObject):
         """
         #Sending using Pydantic payloads
         parameter_payload = PipeClient_Parameter_Payload(target_coordinate_x = self.center_coords[0],
-                                                        target_coordinate_y = self.center_coords[1],
-                                                        track_type = self.track_type,
-                                                        gamma = self.gamma,
-                                                        xMinE = self.xMinE,
-                                                        yMinE = self.yMinE,
-                                                        zoom_value = self.zoom_value,
-                                                        y_track_state = self.y_track_state,
-                                                        autozoom_state = self.autozoom_state,
-                                                        reset_trigger = self.reset_trigger)
+            target_coordinate_y = self.center_coords[1],
+            track_type = self.track_type,
+            gamma = self.gamma,
+            xMinE = self.xMinE,
+            yMinE = self.yMinE,
+            zoom_value = self.zoom_value,
+            y_track_state = self.y_track_state,
+            autozoom_state = self.autozoom_state,
+            reset_trigger = self.reset_trigger)
 
         self.pipeClient.writeToPipe(payload = parameter_payload.pickle_object())
-        image_payload = PipeClient_Image_Payload(frame = jpeg.encode(frame))
+        
+        #image_payload = PipeClient_Image_Payload(frame = jpeg.encode(frame))
+        is_success, im_buf_arr = cv2.imencode(".jpg", frame)
+        byte_im = im_buf_arr.tobytes()
+        
+        image_payload = PipeClient_Image_Payload(frame = byte_im)
         self.reset_trigger = False
         self.pipeClient.writeToPipe(payload = image_payload.pickle_object())
 
         #Receiving pickled Pydantic payloads
         response_pickled = self.pipeClient.readFromPipe()
-        if response_pickled == b'':
+        if response_pickled == b'' or response_pickled == None:
             response = None
         else:
             response = pickle.loads(response_pickled)
     
         #print(f'Response from pipe is {response} meme')
-
+        
         #Display frame
-        if response.x is not None:
+        if response and response.x is not None:
             bB = [response.x, response.y, response.w, response.h]
             boundingBox = (bB[0],bB[1],bB[2]-bB[0],bB[3]-bB[1])
+            # Emit the signal of the x_velocity and y_velocity via the CameraControlSignal
+            self.CameraControlSignal.emit(response.x_velocity, response.y_velocity)
         else:
             boundingBox = None
-            #return
-        
         self.displayFrame(frame, boundingBox)
-        # Emit the signal of the x_velocity and y_velocity via the CameraControlSignal
-        self.CameraControlSignal.emit(response.x_velocity, response.y_velocity)
+
 
     @Slot(bool)
     def pipeStart(self, state=True):
@@ -782,9 +771,9 @@ class FaceDetectionWidget(QObject):
         self.y_track_state = state
 
     @Slot(int, int)
-    def getTrackPosition(self, xVel, yVel):
+    def setTrackPosition(self, xVel, yVel):
         self.center_coords = (xVel, yVel)
-        print(f'coordinates are {self.center_coords}')
+        print(f'setTrackPosition coordinates are {self.center_coords}. Received from {self.sender()} x:{xVel} y:{yVel}')
 
     @Slot(int)
     def set_track_type(self, track_type):
@@ -873,7 +862,6 @@ def main(args = None):
     sys.exit(app.exec_())
 
 logger = add_logger()
-jpeg = TurboJPEG()
 
 if __name__ == '__main__':
     main()

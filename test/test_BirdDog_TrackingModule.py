@@ -66,8 +66,8 @@ def test_tracking_module(track_type, show_video, num_of_frames):
 
 if __name__ == '__main__':
 
-    # test_tracking_module(track_type = None, show_video=False, num_of_frames=100) #No Tracking
+    #test_tracking_module(track_type = None, show_video=False, num_of_frames=100) #No Tracking
     # test_tracking_module(track_type = 0, show_video=False, num_of_frames=100) #Face to body
-    # test_tracking_module(track_type = 1, show_video=False, num_of_frames=100) #Face Only
+    test_tracking_module(track_type = 1, show_video=False, num_of_frames=100) #Face Only
     # test_tracking_module(track_type = 2, show_video=False, num_of_frames=100) #Body Only
     pass

@@ -3,19 +3,13 @@ from face_tracking.objcenter import *
 from tool.custom_widgets import *
 from config import CONFIG
 import time, cv2
-from tool.logging import add_logger
-from decimal import Decimal, getcontext
-import gc
+from tool.info_logging import add_logger
+from decimal import Decimal
 from collections import deque
-
-# def handle_exception(exc_type, exc_value, exc_traceback):
-#     if issubclass(exc_type, KeyboardInterrupt):
-#         sys.__excepthook__(exc_type, exc_value, exc_traceback)
-#         return
-#     logger.error("Uncaught exception", exc_info=(exc_type, exc_value, exc_traceback))
-# sys.excepthook = handle_exception
+import numpy as np
 
 class DetectionWidget():
+    
     def __init__(self):
         FRAME_WIDTH = 640
         FRAME_HEIGHT = 360
@@ -38,13 +32,10 @@ class DetectionWidget():
         #Trackers
         self.b_tracker = None
         self.f_tracker = None
+        self.p_tracker = None
 
         #Toggle for face recognition
         self.f_recognition = False
-
-        #Object Detectors
-        self.face_obj = FastMTCNN() #TRY THIS FIRST
-        self.body_obj = Yolo_v4TINY()
 
         #Slider and button Values
         self.track_type = 0
@@ -53,7 +44,6 @@ class DetectionWidget():
         self.xMinE = float(CONFIG.getint('camera_control', 'horizontal_error_default'))/10
         self.yMinE = float(CONFIG.getint('camera_control', 'vertical_error_default'))/10
        
-        self.gamma = (CONFIG.getint('camera_control', 'gamma_default'))/10
         self.zoom_value = 0
         self.zoom_state = 0
         self.autozoom_state = True
@@ -61,6 +51,7 @@ class DetectionWidget():
         self.face_coords = []
         self.reset_trigger = False
         self.parameter_list = ['target_coordinate_x', 'target_coordinate_y', 'gamma', 'xMinE', 'yMinE', 'zoom_value', 'y_track_state','autozoom_state','reset_trigger','track_type']
+        
         #Speed Tracker
         self.x_prev_speed = None
         self.y_prev_speed = None
@@ -69,21 +60,75 @@ class DetectionWidget():
         self.x_speed_history = deque(maxlen=60)  # Store last 60 frames
         self.y_speed_history = deque(maxlen=60)  # Store last 60 frames
         
+        # Add new attributes if they don't exist
+        self.tracked_id = None
+        self.time_since_last_seen = None
+        self.last_loc = None
+        
+        # Detector and Tracker 
+        self.tracker = ObjectDetectionTracker(yolo_model_path='models/yolov8n_640.onnx', task='detect', use_csrt=True)
+        
     def is_valid_coords(self, coords):
         """
         This function checks whether the coords can be unpacked to x, y, w, h.
         """
         return coords is not None and len(coords) == 4
+    
+    def calculate_camera_control(self, objX, objY, centerX, centerY, W, H):
+        x_controller = PTZ_Controller_Novel(self.focal_length, self.gamma)
+        x_speed = x_controller.omega_tur_plus1(objX, centerX, RMin=0.1)
+        y_controller = PTZ_Controller_Novel(self.focal_length, self.gamma)
+        y_speed = y_controller.omega_tur_plus1(objY, centerY, RMin=0.1, RMax=7.5)
+        x_speed = float(Decimal(self._pos_error_thresholding(W, x_speed, centerX, objX, self.xMinE)).quantize(Decimal("0.0001")))
+        y_speed = float(Decimal(self._pos_error_thresholding(H, y_speed, centerY, objY, self.yMinE)).quantize(Decimal("0.0001")))
+        return x_speed, y_speed
+    
+    def process_speed_history(self, x_speed, y_speed):
+        # Add the new speed to the history.
+        self.x_speed_history.append(x_speed)
+        self.y_speed_history.append(y_speed)
 
-    def main_track(self, frame):
+        # Calculate the mean and standard deviation of these histories.
+        x_mean = np.mean(self.x_speed_history)
+        x_std = np.std(self.x_speed_history)
+        y_mean = np.mean(self.y_speed_history)
+        y_std = np.std(self.y_speed_history)
+
+        # If the current speed is more than a certain number of standard deviations away from the mean, ignore it.
+        threshold = 2  # Adjust as needed.
+        if abs(x_speed - x_mean) > threshold * x_std:
+            x_speed = self.x_prev_speed  # Ignore the calculated speed.
+
+        if abs(y_speed - y_mean) > threshold * y_std:
+            y_speed = self.y_prev_speed  # Ignore the calculated speed.
+
+        return x_speed, y_speed
+
+
+    def main_track(self, frame, skip_frames=5, fallback_delay=5):
         """
         Takes in a list where the first element is the frame
         The second element are the target coordinates of the tracker
         """
+        start = time.time()
+        self.frame_count += 1
+        
+        # Keep track of the frame count
+        if not hasattr(self, 'frame_count'):
+            self.frame_count = 0
+            
+        # Only perform detection every 'skip_frames' frames
+        if self.frame_count % (skip_frames+1) != 1:
+            # Sped down x_speed_history approaching 0 linearly
+            x_speed = self.x_speed_history[-1] * (skip_frames+1) / self.frame_count if len(self.x_speed_history) > 0 else 0.0
+            y_speed = self.y_speed_history[-1] * (skip_frames+1) / self.frame_count if len(self.y_speed_history) > 0 else 0.0
+            
+            self.frame_count += 1
+            return (x_speed, y_speed)
+        
         self.track_coords = []
         self.set_focal_length(self.zoom_value)
-        start = time.time()
-
+    
         if self.reset_trigger is True:
             self.reset_tracker()
             self.reset_trigger = False
@@ -93,26 +138,19 @@ class DetectionWidget():
         (H, W) = frame.shape[:2]
         centerX = self.target_coordinate_x
         centerY = self.target_coordinate_y
+    
+        results =  self.tracker.track_with_csrt(frame, device='cpu', imgsz=640)
+        #print(f"Time taken for detection and tracking: {time.time() - s1_time}")
         
-        #Trackers
+        face_coords = None
+        body_coords = None
 
-        if self.track_type is None:
-            return (None, None)
-            
-        elif self.track_type == 0:
-            #Face-> Body (If cannot detect a face, try to detect a body)
-            face_coords = self.face_tracker(frame)
-            if len(face_coords) <= 0:
-                body_coords = self.body_tracker(frame)
-                
-        elif self.track_type == 1:
-            #Face Only
-            face_coords = self.face_tracker(frame)
+        for result in results:
+            box = result["box"]
+            body_coords = box
+        if len(results) == 0:
+            face_coords=None
         
-        elif self.track_type == 2:
-            #Body Only
-            body_coords = self.body_tracker(frame)
-
         if self.is_valid_coords(face_coords):
             x, y, w, h = face_coords
             self.track_coords = [x, y, x + w, y + h]
@@ -137,63 +175,24 @@ class DetectionWidget():
         else:
             objX = self.target_coordinate_x
             objY = self.target_coordinate_y
-    
-        # #Initiate Lost Tracking sub-routine
-        # else:
-        #     if self.lost_tracking > 100 and self.lost_tracking < 500:
-        #         self.info_status("Lost Tracking Sequence Secondary")
 
-        #     elif self.lost_tracking < 20:
-        #         objX = self.last_loc[0]
-        #         objY = self.last_loc[1]
-        #         self.lost_tracking += 1
-        #         self.info_status("Lost Tracking Sequence Initial")
-
-        #     else:
-        #         objX = centerX
-        #         objY = centerY
-        #         self.info_status('Lost object. Centering')
-        #         self.lost_tracking += 1
-        #         if self.lost_tracking < 500 and self.lost_tracking%100:
-        #             self.b_tracker = None
-
+        objX = int(objX) if objX is not None else 0
+        objY = int(objY) if objY is not None else 0
+        
         ## CAMERA CONTROL
-        x_controller = PTZ_Controller_Novel(self.focal_length, self.gamma)
-        x_speed = x_controller.omega_tur_plus1(objX, centerX, RMin = 0.1)
+        x_speed, y_speed = self.calculate_camera_control(objX, objY, centerX, centerY, W, H)
 
-        y_controller = PTZ_Controller_Novel(self.focal_length, self.gamma)
-        y_speed = y_controller.omega_tur_plus1(objY, centerY, RMin = 0.1, RMax=7.5)
-        
-        x_speed = float(Decimal(self._pos_error_thresholding(W, x_speed, centerX, objX, self.xMinE)).quantize(Decimal("0.0001")))
-        y_speed = float(Decimal(self._pos_error_thresholding(H, y_speed, centerY, objY, self.yMinE)).quantize(Decimal("0.0001")))
-        
         if self.y_track_state is False:
             y_speed = 0
-        self.frame_count += 1
 
+        self.frame_count += 1
         self.x_prev_speed = x_speed
         self.y_prev_speed = y_speed
-        
-        ## Lets add some probablistic smoothing
-        # Add the new speed to the history.
-        self.x_speed_history.append(x_speed)
-        self.y_speed_history.append(y_speed)
 
-        # Calculate the mean and standard deviation of these histories.
-        x_mean = np.mean(self.x_speed_history)
-        x_std = np.std(self.x_speed_history)
-        y_mean = np.mean(self.y_speed_history)
-        y_std = np.std(self.y_speed_history)
+        ## Probabilistic Smoothing
+        x_speed, y_speed = self.process_speed_history(x_speed, y_speed) if bool(CONFIG.getboolean('camera_control', 'speed_history_smoothing')) else (x_speed, y_speed)
+        #print(f"Time taken for main_track: {(time.time() - start)}. Tracking ID {self.tracked_id} xSpeed: {x_speed}, ySpeed: {y_speed}")
 
-        # If the current speed is more than a certain number of standard deviations away from the mean, ignore it.
-        threshold = 2  # Adjust as needed.
-        if abs(x_speed - x_mean) > threshold * x_std:
-            x_speed = self.x_prev_speed  # Ignore the calculated speed.
-
-        if abs(y_speed - y_mean) > threshold * y_std:
-            y_speed = self.y_prev_speed  # Ignore the calculated speed.
-
-        print(f"Speed has been dampened from {self.x_prev_speed} to {x_speed} and {self.y_prev_speed} to {y_speed} by proib")
         return (x_speed, y_speed)
 
     def get_bounding_boxes(self):
@@ -203,11 +202,10 @@ class DetectionWidget():
         #Unpack Dictionary and set Track Parameters
         #Only set tracker parameters that are inside `custom_parameters`
         #Leaving it to {} will not set any custom_parameter in Tracker
+        if custom_parameters == {}:
+            return
         for key in self.parameter_list:
-            try:
-                setattr(self, key, custom_parameters[key])
-            except KeyError:
-                pass
+            setattr(self, key, custom_parameters.get(key))
 
     def get_tracker_parameters(self):
         temp_dict = {}
@@ -225,178 +223,19 @@ class DetectionWidget():
         Values in between might not be linear so adjust from there
         """
         zoom_dict = {0:129, 1:116.53, 2:104.06, 3:91.59, 4: 79.12,5:66.65, 6:54.18, 7:41.71, 8:29.24, 9:16.77, 10:4.3}
-        self.focal_length = zoom_dict.get(int(zoom_level))
+        self.focal_length = zoom_dict.get(int(zoom_level or 0))
     
     def reset_tracker(self):
         print('Triggering reset')
         self.f_tracker = None
         self.b_tracker = None
+        self.tracker.reset_tracker()
         
 
     def get_zoom_speed(self, zoom_speed = 0):
         if zoom_speed != 0:
             zoom_speed = 0
         return zoom_speed
-
-    def face_tracker(self, frame):
-        #ptvsd.debug_this_thread()
-        """
-        Input:
-        Frame: The image on where to run a face_tracker on
-
-        Return:
-        x,y,w,h: Center and box coordiantes
-        []: If no Face is Found
-
-        Do a check every 300 frames
-            If there are detections, check to see if the new detections overlap the current face_coordinates. 
-                If it does overlap, then refresh the self.face_coords with the new test_coords
-                If no overlap, then refresh the tracker so that it conducts a whole frame search
-            If no detections in the body frame, detect on whole frame
-                If there are face detections from the whole frame, return the face with the highest confidence
-                Else, empty the face tracker and return []
-
-        Check to see if tracker is ok
-            Track Current face
-
-        If track is not ok:
-            Add to the lost face count
-            When face Count reaches N, it empties the face_tracker
-        """
-        if self.f_tracker:
-            ok, position = self.f_tracker.update(frame)
-            
-            if self.frame_count % 300 == 0:
-                if self.lost_tracking_count > 0: # Prevent from going negative
-                    self.lost_tracking_count -= 1
-                    
-                logger.debug(f'Running a {(300/30)}s check')
-                pred_coords = self.face_obj.get_all_locations(frame)
-
-                if pred_coords is not None and len(pred_coords) > 0: #There are detections
-                    max_overlap = 0
-                    for i, j in enumerate(pred_coords):
-                        overlap = self.overlap_metric(j, self.face_coords)
-                        if overlap > max_overlap:
-                            max_overlap = overlap
-                            x, y, w, h = j
-                    
-                    if max_overlap >= 0.50:
-                        self.face_coords = [x, y, w, h] # Update face_coords if a sufficient overlap is found
-                        return x, y, w, h
-                    
-                    else:
-                        print(f"Overlap is {max_overlap}. Refreshing Face Detector")
-                        self.f_tracker = None
-                        return []
-                
-                else:
-                        print(f"No detections in the body frame. Refreshing Face Detector")
-                        self.f_tracker = None
-                        return []
-            
-            elif ok:
-                x = int(position[0])
-                y = int(position[1])
-                w = int(position[2])
-                h = int(position[3])
-                cv2.rectangle(frame, (x,y), (x+w,y+h), (255,0,0), 1)
-                x,y,w,h = [0 if i < 0 else i for i in [x,y,w,h]]
-                self.f_track_count = 0
-                face_coords = x,y,w,h
-                
-            else:
-                self.lost_tracking_count += 1
-                if self.f_track_count > 5:
-                    logger.debug('Lost face') 
-                    self.info_status('Refreshing Face Detector from Lost Tracking')     
-                    self.f_tracker = None
-                    return []
-                else:
-                    self.f_track_count += 1
-                    return []
-
-        elif self.f_tracker is None:
-            """
-            Detect a face inside the body Coordinates
-            If no detections in the body frame, detect on whole frame which gets the face detection with the strongest confidence
-            """
-            if self.frame_count % 20 == 0:
-                face_coords = self.face_obj.update(frame)
-            else:
-                face_coords = []
-                
-            if len(face_coords) > 0:
-                x,y,w,h = face_coords
-            else:
-                return []
-
-            #Start a face tracker
-            #self.f_tracker = cv2.TrackerKCF_create()
-            self.f_tracker = cv2.TrackerCSRT_create()
-            self.f_tracker.init(frame, (x,y,w,h))
-            logger.debug('Initiating a face tracker')
-
-        self.face_coords = x,y,w,h
-        return x,y,w,h
-
-    def body_tracker(self, frame):
-        #ptvsd.debug_this_thread()
-        if self.b_tracker is None:
-            #Detect Objects using YOLO every 1 second if No Body Tracker    
-            boxes = []
-            if self.frame_count % 15 == 0:
-                (idxs, boxes, _, _, classIDs, confidences) = self.body_obj.update(frame)
-                print('Running a YOLO')
-
-            if len(boxes) <= 0:
-                return []
-
-            elif len(boxes) == 1:
-                x,y,w,h = boxes[np.argmax(confidences)]
-                x,y,w,h = [0 if i < 0 else int(i) for i in [x,y,w,h]]
-
-            #If the body detections are more than 1 and there are present self.face_coords
-            elif len(boxes) > 1 and len(self.face_coords) >= 1:
-                for i, g in enumerate(boxes):
-                    if self.overlap_metric(g, self.face_coords) >= 0.5:
-                        x,y,w,h = [0 if i < 0 else int(i) for i in [x,y,w,h]]
-                        x,y,w,h = [int(p) for p in boxes[i]]
-                        break
-
-            #Start the body tracker for the given xywh
-            self.b_tracker = cv2.TrackerKCF_create()
-            try:
-                max_width = 100
-                if w > max_width:
-                    scale = max_width/w
-                    x,y,w,h = self._resizeRect(x,y,w,h,scale)
-                else:
-                    pass
-                self.b_tracker.init(frame, (x,y,w,h))
-            except UnboundLocalError:
-                return []
-            return x,y,w,h
-
-        #If theres a tracker already            
-        elif not self.b_tracker is None:
-            tic = time.time()       
-            self.btrack_ok, position = self.b_tracker.update(frame)
-            if self.btrack_ok:
-                x = int(position[0])
-                y = int(position[1])
-                w = int(position[2])
-                h = int(position[3])
-                x,y,w,h = [0 if i < 0 else i for i in [x,y,w,h]]
-
-            else:
-                self.lost_tracking_count += 1
-                logger.debug('Tracking Fail')
-                return []
-            
-
-            cv2.rectangle(frame, (x,y), (x+w,y+h), (255,255,255), 2)
-            return x,y,w,h
 
     def info_status(self, status: str):
         print(status)
@@ -508,7 +347,8 @@ def tracker_main(Tracker, frame, custom_parameters = {}):
         return 0
     
     Tracker.set_tracker_parameters(custom_parameters)
-    x_velocity, y_velocity = Tracker.main_track(frame)
+    x_velocity, y_velocity = Tracker.main_track(frame, skip_frames=2)
+    #print(f"Tracker has returned with x_velocity: {x_velocity}, y_velocity: {y_velocity}")
     track_coords = Tracker.get_bounding_boxes()
     
     output = {
@@ -522,12 +362,13 @@ def tracker_main(Tracker, frame, custom_parameters = {}):
         output["w"] = track_coords[2]
         output["h"] = track_coords[3]
     else:
-        print("Cannot unpack track_coords")
+        #print("Cannot unpack track_coords")
         output["x"] = None
         output["y"] = None
         output["w"] = None
         output["h"] = None
     
+    #print(f"Output XY: {output['x_velocity']}, {output['y_velocity']}")
     return output
 
 logger = add_logger()
@@ -537,10 +378,7 @@ if __name__ == '__main__':
     FRAME_WIDTH = 640
     FRAME_HEIGHT = 360
 
-    try:
-        Tracker
-    except NameError:
-        Tracker = DetectionWidget()
-        print('Starting new tracker?')
+    Tracker = DetectionWidget()
+    print('Starting new tracker?')
     args = {}
     tracker_main(*args)

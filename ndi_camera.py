@@ -39,21 +39,6 @@ class ndi_camera:
         #TODO
         ptz_list = []
         for i, src in enumerate(self.sources):
-            #Connect to each source to receive meta_data
-            #ndi.recv_connect(self.ndi_recv, src)
-            #_,self.v,_,_ = ndi.recv_capture_v2(self.ndi_recv, 5000)
-            # #if positive
-            # if ndi.recv_ptz_is_supported(self.ndi_recv):
-            #     print('PTZ camera found')
-            #     ndi.recv_free_video_v2(self.ndi_recv, self.v)
-            #     ptz_list.append(i)
-
-            # else:
-            #     #print("Checking next NDI source") 
-            #     ndi.recv_free_video_v2(self.ndi_recv, self.v)
-            #     ptz_list.append(i)
-
-            #ndi.recv_free_video_v2(self.ndi_recv, self.v)
             ptz_list.append(i)
         return ptz_list, self.sources
 

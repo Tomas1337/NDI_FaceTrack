@@ -4,10 +4,12 @@ from starlette.websockets import WebSocketDisconnect
 from tool.payloads import *
 from BirdDog_TrackingModule import DetectionWidget, tracker_main
 from PySide2.QtCore import QDataStream, QByteArray, QIODevice,QBuffer
-from turbojpeg import TurboJPEG, TJPF_GRAY, TJSAMP_GRAY, TJFLAG_PROGRESSIVE
+import numpy as np
+import cv2
+# from turbojpeg import TurboJPEG, TJPF_GRAY, TJSAMP_GRAY, TJFLAG_PROGRESSIVE
 
 router = APIRouter()
-jpeg = TurboJPEG()
+# jpeg = TurboJPEG()jpeg
 
 class ConnectionManager:
     def __init__(self):
@@ -91,8 +93,10 @@ def parse_qt_incoming_datastream(data_stream:QDataStream, structure:BaseModel = 
         buff = QByteArray()
         data_stream >> buff
         
-        image_bytes = buff
-        image = jpeg.decode(image_bytes)
+        image_bytes = bytes(buff)
+        nparr = np.frombuffer(image_bytes, np.uint8)
+        image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+
         payload.frame = image
 
     elif header in ['parameter','parameters']:

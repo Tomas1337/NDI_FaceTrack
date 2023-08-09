@@ -9,7 +9,7 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.openapi.utils import get_openapi
 from starlette.responses import StreamingResponse
 from pydantic import BaseModel
-from turbojpeg import TurboJPEG, TJPF_GRAY, TJSAMP_GRAY, TJFLAG_PROGRESSIVE
+#from turbojpeg import TurboJPEG, TJPF_GRAY, TJSAMP_GRAY, TJFLAG_PROGRESSIVE
 from threading import Thread
 from BirdDog_TrackingModule import DetectionWidget, tracker_main
 from tool.pipeclient import PipeClient 
@@ -20,7 +20,7 @@ BUFFERSIZE = 921654
 IMAGE_WIDTH = 640
 IMAGE_HEIGHT = 360
 
-jpeg = TurboJPEG()
+# jpeg = TurboJPEG()
 app = FastAPI()
 app.include_router(websockets.router)
 
@@ -112,7 +112,9 @@ def start_tracking_pipe(pipe_handle):
                 #Parse using Python Pickle
                 data = PipeClient.unpickle_object(raw_data[1])
                 if data.__repr_name__() == PipeClient_Image_Payload().__repr_name__():
-                    frame = jpeg.decode(data.frame)
+                    
+                    nparr = np.frombuffer(data.frame, np.uint8)
+                    frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
                     output = tracker_main(Tracker, frame)
 
                 elif data.__repr_name__() == PipeClient_Parameter_Payload().__repr_name__():
@@ -155,9 +157,9 @@ def start_tracking_pipe(pipe_handle):
         print("Pipe has been closed from server")
 
 def init_pipe_server(pipeName = 'BD_Tracking'):
-    try: 
+    if 'pipeNum' in locals():
         pipeNum += 1
-    except NameError:
+    else:
         pipeNum = 1
 
     while True:
@@ -243,69 +245,12 @@ class Tracker_Object():
     def set_bounding_boxes(self, bounding_box):
         self.bounding_boxes = bounding_box
 
-class Video_Object():
-    def __init__(self):
-        self.np_frame = None
-        self.bounding_boxes = []
-        self.tracker_object = Tracker_Object()
-        
-    def frame_gen(self, ndi_recv, draw = True, track = True):
-        while True:
-            t,v,_,_ = ndi.recv_capture_v2(ndi_recv, 0)
-            if t == ndi.FRAME_TYPE_VIDEO:
-                frame = v.data
-                frame = frame[:,:,:3]
-                frame = np.array(frame)
-                self.np_frame = frame
-
-                if track:
-                    self.track()
-                    if draw and len(self.bounding_boxes[0]) >= 1:
-                        for (x,y,x2,y2) in self.bounding_boxes:
-                            cv2.rectangle(frame, (x,y), (x2,y2), (255,0,0), 1)
-
-                ret, buffer = cv2.imencode('.jpg', frame)
-                frame = buffer.tobytes()
-                yield (b'--frame\r\n'
-                b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n\r\n')
-
-    def get_frame(self):
-        return self.np_frame
-
-    def track(self):
-        output = self.tracker_object.track_frame(self.np_frame)
-        if output is not None:
-            print(output.get('xVelocity'), output.get('yVelocity'))
-            self.bounding_boxes = self.tracker_object.get_bounding_boxes()
-
-# @app.post('/video_feed', include_in_schema=False)
-# def video_feed():
-#     #http://127.0.0.1:5000//video_feed?camera_name=DESKTOP-C16VMFB (VLC) 
-#     camera_name = request.args.get('camera_name')
-#     return render_template("video_feed.html", camera_name=camera_name)
-
-# @app.post('/video_camera', include_in_schema=False)
-# def video_camera():
-#     camera_name = request.args['camera_name']
-#     video_object = Video_Object()
-#     #tracker_object = Tracker_Object(video_object)
-#     # video_thread = Thread(target = start_tracking_html, args=[video_object])
-#     # video_thread.start()    
-#     #return_value = future.result()
-#     #print(return_value)
-#     #print('hello')
-#     #ndi_cam = ndi_camera()
-#     #ndi_recv = ndi_cam.camera_connect(ndi_name=camera_name)
-
-#     return Response(video_object.frame_gen(ndi_recv),
-# 		mimetype = "multipart/x-mixed-replace; boundary=frame")
-
-
 def main():
-    uvicorn.run(app=app, 
+    uvicorn.run(app="TrackingServer_FastAPI:app", 
         host=CONFIG.get('server','host'), 
         port=CONFIG.getint('server','port'), 
-        workers=CONFIG.getint('server','workers'))
+        workers=CONFIG.getint('server','workers'),
+        reload=True)
 
 if __name__ == '__main__':
     main()
