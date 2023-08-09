@@ -57,36 +57,6 @@ class QTrackingButton(QPushButton):
         self.setFont(QFont("Open Sans", 19, QFont.Bold))
         self.setStyleSheet("QPushButton {background-color:#38761d; border-radius: 10px; color: #e6d7c8;} QPushButton:disabled {background-color:#444444;} QPushButton:checked {background-color:#6aa84f;} QPushButton:checked:disabled {background-color:#999999;}")
 
-class MovingObject(QGraphicsTextItem):
-    mouseReleaseSignal = Signal(int, int)
-    def __init__(self, x ,y, scene_width, scene_height):
-        super().__init__()
-        self.setAcceptHoverEvents(True)
-        self.setPlainText("+")
-        self.setDefaultTextColor(Qt.red)
-        self.setFont(QFont("Arial", 35))
-        self.setTextWidth(10)
-        self.bounding_width = self.boundingRect().width()
-        self.bounding_height = self.boundingRect().height()
-        self.setfromCenter(x, y)
-
-        self.width = scene_width
-        self.height = scene_height
-
-    def setfromCenter(self, x, y):
-        x -= int(self.bounding_width/2)
-        y -= int(self.bounding_height/2)
-        self.setPos(x,y)
-
-    # mouse click event
-    def mousePressEvent(self, event):
-        pass
- 
-    def mouseMoveEvent(self, event):
-        orig_cursor_position = event.lastScenePos()
-        updated_cursor_position = event.scenePos()
- 
-        orig_position = self.scenePos()
 
 class MovingObject(QGraphicsTextItem):
     mouseReleaseSignal = Signal(int, int)
