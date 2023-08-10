@@ -34,9 +34,6 @@ class DetectionWidget():
         self.f_tracker = None
         self.p_tracker = None
 
-        #Toggle for face recognition
-        self.f_recognition = False
-
         #Slider and button Values
         self.track_type = 0
         self.y_track_state = True
@@ -66,7 +63,7 @@ class DetectionWidget():
         self.last_loc = None
         
         # Detector and Tracker 
-        self.tracker = ObjectDetectionTracker(yolo_model_path='models/yolov8n_640.onnx', task='detect', use_csrt=True)
+        self.tracker = ObjectDetectionTracker(yolo_model_path='models/yolov8n_640.onnx', task='detect', use_csrt=True, overlap_frames=100)
         
     def is_valid_coords(self, coords):
         """
@@ -148,6 +145,7 @@ class DetectionWidget():
         for result in results:
             box = result["box"]
             body_coords = box
+            face_coords = box
         if len(results) == 0:
             face_coords=None
         
@@ -191,7 +189,6 @@ class DetectionWidget():
 
         ## Probabilistic Smoothing
         x_speed, y_speed = self.process_speed_history(x_speed, y_speed) if bool(CONFIG.getboolean('camera_control', 'speed_history_smoothing')) else (x_speed, y_speed)
-        #print(f"Time taken for main_track: {(time.time() - start)}. Tracking ID {self.tracked_id} xSpeed: {x_speed}, ySpeed: {y_speed}")
 
         return (x_speed, y_speed)
 

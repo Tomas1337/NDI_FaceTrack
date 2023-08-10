@@ -222,11 +222,6 @@ def load_class_names(namesfile):
 
 def post_processing(img, conf_thresh, n_classes, nms_thresh, output):
 
-    # anchors = [12, 16, 19, 36, 40, 28, 36, 75, 76, 55, 72, 146, 142, 110, 192, 243, 459, 401]
-    # num_anchors = 9
-    # anchor_masks = [[0, 1, 2], [3, 4, 5], [6, 7, 8]]
-    # strides = [8, 16, 32]
-    # anchor_step = len(anchors) // num_anchors
 
     boxes = []  
     t1 = time.time()
@@ -264,3 +259,19 @@ def str2bool(v):
         return False
     else:
         raise argparse.ArgumentTypeError('Boolean value expected.')
+
+
+def overlap_check(bbox1, bbox2):
+    # Implementing an overlap check using the IoU (Intersection over Union)
+    x1, y1, w1, h1 = bbox1
+    x2, y2, w2, h2 = bbox2
+    xi1 = max(x1, x2)
+    yi1 = max(y1, y2)
+    xi2 = min(x1 + w1, x2 + w2)
+    yi2 = min(y1 + h1, y2 + h2)
+
+    inter_area = max(xi2 - xi1, 0) * max(yi2 - yi1, 0)
+    union_area = w1 * h1 + w2 * h2 - inter_area
+
+    overlap = inter_area / union_area if union_area != 0 else 0
+    return overlap

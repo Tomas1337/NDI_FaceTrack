@@ -107,16 +107,21 @@ class MovingObject(QGraphicsTextItem):
         self.setPos(QPointF(updated_cursor_x, updated_cursor_y))
  
     def mouseReleaseEvent(self, event):
-        self.center_x = self.pos().x() + int(self.bounding_width/2)
-        self.center_y = self.pos().y() + int(self.bounding_height/2)
+        event.accept()
+        self.center_x = self.pos().x() + int(self.bounding_width / 2)
+        self.center_y = self.pos().y() + int(self.bounding_height / 2)
         print('x: {0}, y: {1}'.format(self.center_x, self.center_y))
         self.mouseReleaseSignal.emit(self.center_x, self.center_y)
+        self.updatePosition() # Added this line to update the position
+
+    def updatePosition(self):
+        self.setfromCenter(self.pos().x(), self.pos().y())
 
     def _getPosition(self):
         self.center_x = self.pos().x() + int(self.bounding_width/2)
         self.center_y = self.pos().y() + int(self.bounding_height/2)
         return (self.center_x, self.center_y)
-
+    
 class GraphicView(QGraphicsView):
     # This is Frame where the moving object moves around in
     mouseReleaseSignal = Signal(int, int)
@@ -131,22 +136,19 @@ class GraphicView(QGraphicsView):
         
         width = self.w_parent.size().width()
         # height = parent.frameGeometry().height() 
-        #width = 900
         height = 360
         center = (width/2, height/2)
         print("Center {}".format(center))
-        
-        self.updatePosition()
+        self.moveObject = MovingObject(center[0], center[1], width, height)
+        self.moveObject.mouseReleaseSignal.connect(self.mouseReleaseSignal)
+        self.moveObject.setObjectName("crosshair")
 
         self.setSceneRect(0, 0, width, height)
         self.setStyleSheet("background-color: #1c2e66;")
         #Add some alpha
-        #self.setStyleSheet("background-color: rgba(28, 46, 102, 0.5);")
         self.setStyleSheet("background:transparent;")
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.moveObject = MovingObject(center[0], center[1], width, height)
-        self.mouseReleaseSignal.connect(self.moveObject.mouseReleaseEvent)
 
         self.scene.addItem(self.moveObject)
         self.move(0,0)
@@ -164,22 +166,25 @@ class GraphicView(QGraphicsView):
             self.setSceneRect(0, 0, width, height)
 
             # Position the GraphicView at the center of the parent widget
-            x = (parent.width() - self.width()) / 2
-            y = (parent.height() - self.height()) / 2
-            margin_y = parent.layout().contentsMargins().top()
+            # x = (parent.width() - self.width()) / 2
+            # y = (parent.height() - self.height()) / 2
+            # margin_y = parent.layout().contentsMargins().top()
             self.move(0,60)
+            self.moveObject.updatePosition()
 
             
     def updateSize(self):
         if self.w_parent is not None:
-            width = 640#self.w_parent.size().width() 
-            height = 360#self.w_parent.size().height() 
+            width = self.w_parent.size().width() #640#
+            height = self.w_parent.size().height() #360#
             center = (width/2, height/2)
             self.setSceneRect(0, 0, width, height)
             self.moveObject = MovingObject(center[0], center[1], width, height)
 
     def mouseReleaseEvent(self, e):
-        (center_x, center_y) = self.moveObject._getPosition()
+        crosshair = next(item for item in self.scene.items() if item.objectName() == "crosshair")
+
+        (center_x, center_y) = crosshair._getPosition()
         self.mouseReleaseSignal.emit(center_x, center_y)
         self.updateSize()
         self.updatePosition()
@@ -212,35 +217,3 @@ def DialogBox():
    returnValue = msgBox.exec()
    if returnValue == QMessageBox.Ok:
        print('OK clicked')
-
-class QNameTag(QLineEdit):
-    #Custom signal for a modified textEdited Signal that emits a list of [previous_str, new_string]
-    
-    change_name_signal = Signal(list)
-
-    def __init__(self, text):
-        #ptvsd.debug_this_thread()
-        super().__init__()
-        self.setText(text)
-        self.returnPressed.connect(self.set_read_only)
-        self.returnPressed.connect(self.change_name)
-        self.old_name = self.text()
-        self.setReadOnly(True)
-        #self.setEnabled(False)
-        
-    def mouseDoubleClickEvent(self, event):
-        self.saved_name = self.text() 
-        self.setReadOnly(False)
-        # do something
-
-    def change_name(self):
-        self.change_name_signal.emit([self.saved_name, self.text()])
-
-    @Slot()
-    def set_read_only(self):
-        self.setReadOnly(True)
-
-    # def set_editable(self):
-    #     self.setReadOnly = False
-        
-
