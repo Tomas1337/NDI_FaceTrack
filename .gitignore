@@ -67,3 +67,4 @@ __pycache__/config.cpython-37.pyc
 __pycache__/config.cpython-38.pyc
 __pycache__/ndi_camera.cpython-38.pyc
 datasets/
+wandb/

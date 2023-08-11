@@ -32,7 +32,7 @@
             "console": "integratedTerminal",
             //"python": "${command:python.interpreterPath}"
             "python": "C:/Projects/NDI_FaceTrack/.venv0703torchGPU/Scripts/python.exe",
-            //"args": ["--reload","True"]
+            "args": ["--reload","True"]
         },
         {
             "name": "Hidden UI",
