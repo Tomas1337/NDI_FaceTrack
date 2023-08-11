@@ -16,9 +16,9 @@ from tool.utils import str2bool
 from tool.pyqtkeybind import keybinder
 from TrackingServer_FastAPI import main as app_main
 from multiprocessing import Process
-import debugpy
-debugpy.listen(("localhost", 5678))
-debugpy.wait_for_client()
+# import debugpy
+# debugpy.listen(("localhost", 5678))
+# debugpy.wait_for_client()
 
 class WinEventFilter(QAbstractNativeEventFilter):
     def __init__(self, keybinder):

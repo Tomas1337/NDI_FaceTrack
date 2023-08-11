@@ -1,14 +1,15 @@
 import cv2
 import os, time
 import numpy as np
-from facenet_pytorch import MTCNN
+from mtcnn_cv2 import MTCNN
 from tool.utils import overlap_check
 
 CURR_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),".."))
-from ultralytics.yolo.engine.model import YOLO
+
 from config import CONFIG
 
 class FastMTCNN(object):
+    from ultralytics.yolo.engine.model import YOLO
     """Fast MTCNN implementation."""
     
     def __init__(self):
@@ -108,7 +109,7 @@ class ObjectDetectionTracker:
                 x,y,w,h = [int(i) for i in [x,y,w,h]]
                 self.p_track_count = 0
                 
-                # Overlap check, if needed
+                ## Overlap check, if needed
                 if self.overlap_frames is not None and self.overlap_check_count >= self.overlap_frames:
                     results = self.model.predict(frame, **kwargs)
                     if len(results) == 0:
@@ -134,12 +135,11 @@ class ObjectDetectionTracker:
                     if boxes is None or len(boxes) == 0:
                         return []
 
-                    #scaled_box = (box[0] * scale_x, box[1] * scale_y, box[2] * scale_x, box[3] * scale_y)
                     x1, y1, x2, y2 = [int(i) for i in boxes[0]]
 
                     detected_box = (x1, y1, x2 - x1, y2 - y1)
                     overlap = overlap_check(self.p_coords, detected_box)
-                    if overlap < 0.30:
+                    if overlap < 0.10:
                         print(f"Overlap is {overlap}. Resetting tracker")
                         self.p_tracker = None
                         self.overlap_check_count = 0
@@ -148,7 +148,6 @@ class ObjectDetectionTracker:
                 else:
                     self.overlap_check_count += 1
 
-                
             else:
                 self.lost_tracking_count += 1
                 if self.p_track_count > 5:
@@ -181,18 +180,16 @@ class ObjectDetectionTracker:
                     scaled_box = [int(i) for i in scaled_box]
                     x1,y1,x2,y2 = scaled_box
                     x,y,w,h = x1,y1,x2-x1,y2-y1
+                  
+                    # Reducing the bounding box size around the center
+                    w = int(w * (1 - 0.5)) if w > frame.shape[1]*0.5 else w
+                    h = int(h * (1 - 0.5)) if h > frame.shape[0]*0.5 else h
                     
-
             #Start CSRT tracker
             #self.p_tracker = cv2.TrackerKCF_create()
-            self.p_tracker = cv2.TrackerCSRT_create(self.csrt_params)
-            # modified_h = int(0.69 * original_h) if h > int(0.69 * original_h) else h
-            # modified_w = int(0.5 * w) if x + int(0.5 * w) < original_w else x
-            # h = modified_h
-            # w = modified_w
-            self.p_tracker.init(frame, (x,y,w,h)) # We need to modify the height so that it is not too tall. make it 69% of the max height of the frame
+            self.p_tracker = cv2.TrackerCSRT_create(self.csrt_params)    
+            self.p_tracker.init(frame, (x,y,w,h)) 
             
-
         self.p_coords = x,y,w,h
         return [{
             'box': (x,y,w,h),

@@ -1,15 +1,11 @@
-import time, win32file, win32pipe, cv2, json, requests
+import time, win32file, win32pipe, cv2
 import numpy as np 
-import uvicorn, pywintypes, pickle
+import uvicorn, pywintypes
 from config import CONFIG
-from multiprocessing import Process
-from fastapi import FastAPI, File, Body, WebSocket
+from fastapi import FastAPI
 from fastapi.responses import HTMLResponse, JSONResponse
-#from fastapi.testclient import TestClient
 from fastapi.openapi.utils import get_openapi
-from starlette.responses import StreamingResponse
 from pydantic import BaseModel
-#from turbojpeg import TurboJPEG, TJPF_GRAY, TJSAMP_GRAY, TJFLAG_PROGRESSIVE
 from threading import Thread
 from BirdDog_TrackingModule import DetectionWidget, tracker_main
 from tool.pipeclient import PipeClient 
