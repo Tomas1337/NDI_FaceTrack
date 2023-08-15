@@ -2,8 +2,8 @@
 import sys
 import cv2
 sys.path.append('.')
-from face_tracking.objcenter import *
-from face_tracking.camera_control import PTZ_Controller_Novel
+from object_tracking.objcenter import *
+from object_tracking.camera_control import PTZ_Controller_Novel
 from decimal import Decimal
 class Detection():
     """

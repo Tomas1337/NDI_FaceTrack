@@ -1,9 +1,9 @@
 import cv2
 import os, time
 import numpy as np
-#from mtcnn_cv2 import MTCNN
 from tool.utils import overlap_check
-
+from .pytorch_mtcnn.detector import detect_faces
+from .onnx_yolov8 import ResultItem, BoxResult, Result, NumpyWrapper
 CURR_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),".."))
 
 from config import CONFIG
@@ -13,19 +13,15 @@ class FastMTCNN(object):
     """Fast MTCNN implementation."""
     
     def __init__(self):
-        # from facenet_pytorch import MTCNN
+        from .pytorch_mtcnn.mtcnn import MTCNN
         self.resize = 0.5
         self.mtcnn = MTCNN(margin = 14, factor = 0.6, keep_all= True,post_process=True, select_largest=False,device= 'cpu')
-
-    def update(self, frame ,minConf=0.9):
-        """ 
-        Checks if there are body coords.
-        If None, then it assumes that you want to scan the entire frame
-        If there are body_coords then it cuts out the frame with only the body detections
-        """
+    
+    def update(self, frame, minConf=0.9, iou_threshold=0.45, nms_threshold=0.5):
         print('Running a scoped MTCNN')
         width_minimum = 30
         height_minimum = 40
+        original_shape = frame.shape[:2]
         if self.resize != 1:
             frame = cv2.resize(frame, (int(frame.shape[1] * self.resize), int(frame.shape[0] * self.resize)))
 
@@ -35,16 +31,38 @@ class FastMTCNN(object):
 
         # Resize the bounding boxes
         boxes = (boxes * (1 / self.resize)).astype(int)
-        
-        # Filter boxes by confidence and size
-        boxes = [box for box, res in zip(boxes, results) 
-                if res >= minConf and (box[2] - box[0]) >= width_minimum and (box[3] - box[1]) >= height_minimum]
 
-        # Return the box with maximum confidence (if you need all boxes, adjust this)
-        if boxes:
-            return boxes[np.argmax(results)]
-        
-        return []
+        # Filter boxes by confidence and size
+        filtered_boxes = []
+        scores = []
+        for box, res in zip(boxes, results):
+            if res >= minConf and (box[2] - box[0]) >= width_minimum and (box[3] - box[1]) >= height_minimum:
+                filtered_boxes.append(box)
+                scores.append(res)
+
+        # Apply Non-Maximum Suppression (NMS) to filter the results
+        result_boxes = cv2.dnn.NMSBoxes(filtered_boxes, scores, minConf, iou_threshold, nms_threshold)
+        result_items = []
+
+        for i in range(len(result_boxes)):
+            index = result_boxes[i]
+            box = filtered_boxes[index]
+            xyxy = np.array([
+                box[0],
+                box[1],
+                box[2],
+                box[3]
+            ])
+            boxes_obj = BoxResult(
+                xyxy=xyxy[np.newaxis, :],
+                cls=np.array([0]).astype(int),  # Assuming class ID 0 for faces
+                conf=np.array([scores[index]])
+            )
+            result_item = Result(boxes=boxes_obj)
+            result_items.append(result_item)
+
+        return result_items
+
 
     def get_all_locations(self, frame, minConf = 0.6):
         start_time = time.time()
@@ -60,17 +78,10 @@ class FastMTCNN(object):
             boxes = np.multiply(boxes,(1/self.resize))
             return boxes
 
+        
 class ObjectDetectionTracker:
-    def __init__(self, yolo_model_path, device=0, use_csrt=False, track_type='person', overlap_frames=None, **kwargs):
-        if yolo_model_path.endswith('.pt'):
-            from ultralytics.yolo.engine.model import YOLO    
-            #self.model_type = 'ultralytics'
-        else:
-            from face_tracking.onnx_yolov8 import ONNX_YOLOv8 as YOLO
-            #self.model_type = 'onnxruntime'
-            #from ultralytics.yolo.engine.model import YOLO
-        self.model = YOLO(yolo_model_path, **kwargs)
-        #self.face_detector = FastMTCNN() if track_type == 'face' else None
+    def __init__(self, yolo_model_path, device=0, use_csrt=False, track_type='face', overlap_frames=None, **kwargs):
+        self.general_detector = GeneralDetector(yolo_model_path, track_type)
         self.device = device # 0,1 for GPU; 'cpu' for CPU
         self.use_csrt = use_csrt
         self.p_track_count = 0
@@ -80,7 +91,6 @@ class ObjectDetectionTracker:
         self.track_type = track_type
         self.overlap_frames = overlap_frames
         self.overlap_check_count = 0
-        
         
         if self.use_csrt:
             params = cv2.TrackerCSRT_Params()
@@ -175,7 +185,7 @@ class ObjectDetectionTracker:
                 
 
         elif self.p_tracker is None:
-            results = self.model.predict(frame, **kwargs)
+            results = self.general_detector.detect(frame, minConf=0.9)
             if len(results) == 0:
                 return []
             for result in results:
@@ -216,10 +226,42 @@ class ObjectDetectionTracker:
     def reset_tracker(self):
         self.p_tracker = None
 
+class GeneralDetector:
+    def __init__(self, yolo_model_path, track_type='fallback'):
+        if yolo_model_path.endswith('.pt'):
+            from ultralytics.yolo.engine.model import YOLO
+        else:
+            from object_tracking.onnx_yolov8 import ONNX_YOLOv8 as YOLO
+        self.yolo_model = YOLO(yolo_model_path)
+        self.face_detector = FastMTCNN()
+        self.track_type = track_type
 
+    def detect(self, frame, minConf=0.9):
+        if self.track_type == 'face':
+            return self.face_detector.update(frame, 0.2)
+        elif self.track_type == 'person':
+            return self._detect_person(frame, minConf)
+        else: # "Fallback face > body"
+            face_result = self.face_detector.update(frame, minConf)
+            if face_result:
+                return face_result
+            return self._detect_person(frame, minConf)
 
+    def _detect_person(self, frame, minConf):
+        results = self.yolo_model.predict(frame)
+        return results
+        # if len(results) == 0:
+        #     return []
 
+        # boxes = []
+        # for result in results:
+        #     classes = result.boxes.cls.cpu().numpy().astype(int)
+        #     if 0 not in classes:
+        #         continue
 
+        #     detected_boxes = result.boxes.xyxy.cpu().numpy().astype(int)
+        #     confidences = result.boxes.conf.cpu().numpy().astype(float)
+        #     filtered_indices = [i for i, class_id in enumerate(classes) if class_id == 0 and confidences[i] >= minConf]
+        #     boxes += [detected_boxes[i] for i in filtered_indices]
 
-
-        
+        # return [{'box': (x1, y1, x2 - x1, y2 - y1), 'class_id': 0} for x1, y1, x2, y2 in boxes]

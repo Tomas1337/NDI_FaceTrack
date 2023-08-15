@@ -1,5 +1,5 @@
-from face_tracking.camera_control import *
-from face_tracking.objcenter import *
+from object_tracking.camera_control import *
+from object_tracking.objcenter import *
 from tool.custom_widgets import *
 from config import CONFIG
 import time, cv2

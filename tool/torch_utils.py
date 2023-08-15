@@ -7,9 +7,6 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 from torch.autograd import Variable
 
-import itertools
-import struct  # get_image_size
-import imghdr  # get_image_size
 sys.path.insert(0, 'tool/')
 import utils 
 
@@ -44,28 +41,6 @@ def bbox_ious(boxes1, boxes2, x1y1x2y2=True):
     carea[mask] = 0
     uarea = area1 + area2 - carea
     return carea / uarea
-
-
-def nms(boxes, nms_thresh):
-    if len(boxes) == 0:
-        return boxes
-
-    det_confs = torch.zeros(len(boxes))
-    for i in range(len(boxes)):
-        det_confs[i] = 1 - boxes[i][4]
-
-    _, sortIds = torch.sort(det_confs)
-    out_boxes = []
-    for i in range(len(boxes)):
-        box_i = boxes[sortIds[i]]
-        if box_i[4] > 0:
-            out_boxes.append(box_i)
-            for j in range(i + 1, len(boxes)):
-                box_j = boxes[sortIds[j]]
-                if bbox_iou(box_i, box_j, x1y1x2y2=False) > nms_thresh:
-                    # print(box_i, box_j, bbox_iou(box_i, box_j, x1y1x2y2=False))
-                    box_j[4] = 0
-    return out_boxes
 
 
 def convert2cpu(gpu_matrix):
@@ -310,8 +285,6 @@ def yolo_forward(output, conf_thresh, num_classes, anchors, num_anchors, only_ob
     # confs: [batch, num_anchors * H * W, num_classes]
 
     return  boxes, confs
-
-
 
 
 def do_detect(model, img, conf_thresh, n_classes, nms_thresh, use_cuda=1):
