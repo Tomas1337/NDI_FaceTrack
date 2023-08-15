@@ -77,6 +77,7 @@ __pycache__/ndi_camera.cpython-38.pyc
 datasets/
 wandb/
 runs/*
+runs/
 runs/detect/*
 models/backbones/*
 models/osnet_x0_25_msmt17.pth
