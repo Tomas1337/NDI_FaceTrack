@@ -31,7 +31,8 @@
             "program": "TrackingServer_FastAPI.py",
             "console": "integratedTerminal",
             //"python": "${command:python.interpreterPath}"
-            "python": "C:/Projects/NDI_FaceTrack/.venv0703torchGPU/Scripts/python.exe",
+            // "python": "C:/Projects/NDI_FaceTrack/.venv0703torchGPU/Scripts/python.exe",
+            "python": "C:/Projects/NDI_FaceTrack/.venvBuildBinary/Scripts/python.exe",
             "args": ["--reload","True"]
         },
         {
@@ -67,5 +68,13 @@
             "python": "${command:python.interpreterPath}"
             
         },
+        {
+            "name": "ONNXruntime vs Ultralytics runtime",
+            "type": "python",
+            "request": "launch",
+            "program": "face_tracking/onnx_yolov8.py",
+            "console": "integratedTerminal",
+            "python": "C:/Projects/NDI_FaceTrack/.venv0703torchGPU/Scripts/python.exe",
+        }
     ]
 }

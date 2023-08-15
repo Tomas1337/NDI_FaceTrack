@@ -1,8 +1,6 @@
 from PySide2.QtCore import QTextStream, QFile, QDateTime, QSize, Qt, QTimer,QRect, QThread, QObject, Signal, Slot, QAbstractNativeEventFilter, QAbstractEventDispatcher
 from PySide2.QtWidgets import (QShortcut, QApplication, QCheckBox, QComboBox, QGridLayout, QGroupBox, QHBoxLayout, QLabel, QBoxLayout, QProgressBar, QPushButton, QButtonGroup, QSlider, QStyleFactory, QTableWidget, QTabWidget, QTextEdit, QVBoxLayout, QWidget, QAbstractButton, QMainWindow, QAction, QMenu, QStyleOptionSlider, QStyle, QSpacerItem, QSizePolicy)
 from PySide2.QtGui import QKeySequence, QImage, QPixmap, QPainter, QBrush, QFont, QIcon
-from face_tracking.objcenter import *
-from face_tracking.camera_control import *
 from ndi_camera import ndi_camera
 from tool.info_logging import add_logger
 import numpy as np
@@ -14,11 +12,10 @@ from tool.pipeclient import PipeClient
 from tool.payloads import *
 from tool.utils import str2bool
 from tool.pyqtkeybind import keybinder
-from TrackingServer_FastAPI import main as app_main
 from multiprocessing import Process
-# import debugpy
-# debugpy.listen(("localhost", 5678))
-# debugpy.wait_for_client()
+import debugpy
+debugpy.listen(("localhost", 5678))
+debugpy.wait_for_client()
 
 class WinEventFilter(QAbstractNativeEventFilter):
     def __init__(self, keybinder):
@@ -585,7 +582,7 @@ class Video_Object(QObject):
         self.DisplayNormalVideoSignal.emit(image)
 
     @Slot(float, float)
-    def camera_control(self, Xspeed, Yspeed, repeat=3):
+    def camera_control(self, Xspeed, Yspeed, repeat=2):
         """
         Function to send out the X-Y Vectors to the camera directly
         The loop helps the control of how many times the vectors are sent in one call
@@ -642,6 +639,7 @@ class DetectionWidget(QObject):
         frame (np.ndarray): image frame sent to the server,
         """
         #Sending using Pydantic payloads
+        #debugpy.breakpoint()
         parameter_payload = PipeClient_Parameter_Payload(target_coordinate_x = self.center_coords[0],
             target_coordinate_y = self.center_coords[1],
             track_type = self.track_type,
@@ -826,9 +824,11 @@ def main(args = None):
         #retVal = DialogBox()
         # exit()
         # @TODO: Start the server in the background
-        print('Trying to start own Server')
-        fastapi_process = Process(target = app_main)
-        fastapi_process.start()
+        # print('Trying to start own Server')
+        # from TrackingServer_FastAPI import main as app_main
+        # fastapi_process = Process(target = app_main)
+        # fastapi_process.start()
+        pass
 
             
     args_dict = vars(args)
