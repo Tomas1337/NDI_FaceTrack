@@ -13,19 +13,18 @@ class FastMTCNN(object):
     
     def __init__(self):
         from .pytorch_mtcnn.mtcnn import MTCNN
-        self.resize = 0.5
-        self.mtcnn = MTCNN(margin = 14, factor = 0.6, keep_all= True,post_process=True, select_largest=False,device= 'cpu')
+        self.resize = 1
+        self.mtcnn = MTCNN(margin = 14, factor = 0.709, keep_all= True,post_process=True, select_largest=False,device= 'cpu')
     
     def update(self, frame, minConf=0.9, iou_threshold=0.45, nms_threshold=0.5):
         print('Running a scoped MTCNN')
         width_minimum = 30
         height_minimum = 40
-        original_shape = frame.shape[:2]
         if self.resize != 1:
             frame = cv2.resize(frame, (int(frame.shape[1] * self.resize), int(frame.shape[0] * self.resize)))
 
         boxes, results = self.mtcnn.detect(frame, landmarks=False)
-        if boxes is None:
+        if boxes is None or len(boxes) == 0:
             return []
 
         # Resize the bounding boxes
@@ -112,8 +111,8 @@ class ObjectDetectionTracker:
     
     def track_with_csrt(self, source=None, imgsz=640, **kwargs):
         original_h, original_w = source.shape[:2]  # Save the original frame size
-        scale_x = original_w / imgsz
-        scale_y = original_h / imgsz
+        scale_x = 1#original_w / imgsz
+        scale_y = 1#original_h / imgsz
         frame = cv2.resize(source, (imgsz, imgsz))
 
         if self.p_tracker:
@@ -237,7 +236,7 @@ class GeneralDetector:
 
     def detect(self, frame, minConf=0.9):
         if self.track_type == 'face':
-            return self.face_detector.update(frame, 0.2)
+            return self.face_detector.update(frame, minConf=0.2)
         elif self.track_type == 'person':
             return self._detect_person(frame, minConf)
         else: # "Fallback face > body"
