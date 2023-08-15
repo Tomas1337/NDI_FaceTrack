@@ -121,6 +121,8 @@ class DetectionWidget():
             # x_speed = self.x_speed_history[-1] * (skip_frames+1) / self.frame_count if len(self.x_speed_history) > 0 else 0.0
             # y_speed = self.y_speed_history[-1] * (skip_frames+1) / self.frame_count if len(self.y_speed_history) > 0 else 0.0            
             self.frame_count += 1
+            x_speed = self.x_prev_speed
+            y_speed = self.y_prev_speed
             return (x_speed, y_speed)
         
         self.track_coords = []
@@ -344,7 +346,7 @@ def tracker_main(Tracker, frame, custom_parameters = {}):
         return 0
     
     Tracker.set_tracker_parameters(custom_parameters)
-    x_velocity, y_velocity = Tracker.main_track(frame, skip_frames=2)
+    x_velocity, y_velocity = Tracker.main_track(frame, skip_frames=None)
     #print(f"Tracker has returned with x_velocity: {x_velocity}, y_velocity: {y_velocity}")
     track_coords = Tracker.get_bounding_boxes()
     

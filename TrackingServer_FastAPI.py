@@ -101,6 +101,11 @@ def start_tracking_pipe(pipe_handle):
         if res == 0:
             print(f"SetNamedPipeHandleState return code: {res}")
         
+        turbojpg_decoding = CONFIG.getboolean('server', 'turbojpeg')
+        if turbojpg_decoding:
+            from turbojpeg import TurboJPEG
+            jpeg_decoder = TurboJPEG()
+            
         while track_flag is True:   
             try:
                 #Read Pipe in bytes form
@@ -109,9 +114,12 @@ def start_tracking_pipe(pipe_handle):
                 #Parse using Python Pickle
                 data = PipeClient.unpickle_object(raw_data[1])
                 if data.__repr_name__() == PipeClient_Image_Payload().__repr_name__():
-                    
-                    nparr = np.frombuffer(data.frame, np.uint8)
-                    frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+                    # TurboJPEG vs OpenCV has 1.6x decoding speed difference but TurboJPEG comes with installation overhead for system
+                    if turbojpg_decoding:
+                        frame = jpeg_decoder.decode(data.frame)
+                    else:
+                        nparr = np.frombuffer(data.frame, np.uint8)
+                        frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
                     output = tracker_main(Tracker, frame)
 
                 elif data.__repr_name__() == PipeClient_Parameter_Payload().__repr_name__():
