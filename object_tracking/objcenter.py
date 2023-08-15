@@ -2,7 +2,6 @@ import cv2
 import os, time
 import numpy as np
 from tool.utils import overlap_check
-from .pytorch_mtcnn.detector import detect_faces
 from .onnx_yolov8 import ResultItem, BoxResult, Result, NumpyWrapper
 CURR_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),".."))
 
