@@ -10,6 +10,7 @@ python-probe.log
 dist/*
 build/*
 face_tracking/__pycache__/*
+deep-person-reid/
 .vscode/__pycache__/preview/*
 __pycache__/*
 __pycache__/*.pyc
