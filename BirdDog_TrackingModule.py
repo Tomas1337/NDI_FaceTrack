@@ -63,7 +63,8 @@ class DetectionWidget():
         self.last_loc = None
         
         # Detector and Tracker 
-        self.tracker = ObjectDetectionTracker(yolo_model_path='models/yolov8n_640.onnx', task='detect', use_csrt=True, overlap_frames=100)
+        self.tracker = ObjectDetectionTracker(yolo_model_path='models/yolov8n_640.onnx', 
+            task='detect', use_csrt=True, overlap_frames=None, device='cpu')
         
     def is_valid_coords(self, coords):
         """
@@ -102,7 +103,7 @@ class DetectionWidget():
         return x_speed, y_speed
 
 
-    def main_track(self, frame, skip_frames=5, fallback_delay=5):
+    def main_track(self, frame, skip_frames=None, fallback_delay=5):
         """
         Takes in a list where the first element is the frame
         The second element are the target coordinates of the tracker
@@ -114,12 +115,11 @@ class DetectionWidget():
         if not hasattr(self, 'frame_count'):
             self.frame_count = 0
             
-        # Only perform detection every 'skip_frames' frames
-        if self.frame_count % (skip_frames+1) != 1:
+        #Only perform detection every 'skip_frames' frames
+        if skip_frames and self.frame_count % (skip_frames+1) != 1:
             # Sped down x_speed_history approaching 0 linearly
-            x_speed = self.x_speed_history[-1] * (skip_frames+1) / self.frame_count if len(self.x_speed_history) > 0 else 0.0
-            y_speed = self.y_speed_history[-1] * (skip_frames+1) / self.frame_count if len(self.y_speed_history) > 0 else 0.0
-            
+            # x_speed = self.x_speed_history[-1] * (skip_frames+1) / self.frame_count if len(self.x_speed_history) > 0 else 0.0
+            # y_speed = self.y_speed_history[-1] * (skip_frames+1) / self.frame_count if len(self.y_speed_history) > 0 else 0.0            
             self.frame_count += 1
             return (x_speed, y_speed)
         

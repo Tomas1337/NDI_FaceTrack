@@ -11,6 +11,7 @@ from BirdDog_TrackingModule import DetectionWidget, tracker_main
 from tool.pipeclient import PipeClient 
 from tool.payloads import *
 from routers import websockets
+import os
 
 BUFFERSIZE = 921654
 IMAGE_WIDTH = 640
@@ -146,6 +147,9 @@ def start_tracking_pipe(pipe_handle):
         else:
             print(e)
         print("finished now")
+    
+    except Exception as e:
+        print(f"Pickle error: {e}")
 
     finally:
         win32pipe.DisconnectNamedPipe(pipe_handle)
@@ -242,11 +246,12 @@ class Tracker_Object():
         self.bounding_boxes = bounding_box
 
 def main():
+    is_production = os.environ.get("PRODUCTION", False)
     uvicorn.run(app="TrackingServer_FastAPI:app", 
         host=CONFIG.get('server','host'), 
         port=CONFIG.getint('server','port'), 
         workers=CONFIG.getint('server','workers'),
-        reload=True)
+        reload= not CONFIG.getboolean('server','production'),)
 
 if __name__ == '__main__':
     main()

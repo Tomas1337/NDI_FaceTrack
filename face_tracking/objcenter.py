@@ -1,7 +1,7 @@
 import cv2
 import os, time
 import numpy as np
-from mtcnn_cv2 import MTCNN
+#from mtcnn_cv2 import MTCNN
 from tool.utils import overlap_check
 
 CURR_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),".."))
@@ -9,7 +9,7 @@ CURR_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),".."))
 from config import CONFIG
 
 class FastMTCNN(object):
-    from ultralytics.yolo.engine.model import YOLO
+    
     """Fast MTCNN implementation."""
     
     def __init__(self):
@@ -62,8 +62,15 @@ class FastMTCNN(object):
 
 class ObjectDetectionTracker:
     def __init__(self, yolo_model_path, device=0, use_csrt=False, track_type='person', overlap_frames=None, **kwargs):
+        if yolo_model_path.endswith('.pt'):
+            from ultralytics.yolo.engine.model import YOLO    
+            #self.model_type = 'ultralytics'
+        else:
+            from face_tracking.onnx_yolov8 import ONNX_YOLOv8 as YOLO
+            #self.model_type = 'onnxruntime'
+            #from ultralytics.yolo.engine.model import YOLO
         self.model = YOLO(yolo_model_path, **kwargs)
-        self.face_detector = FastMTCNN() if track_type == 'face' else None
+        #self.face_detector = FastMTCNN() if track_type == 'face' else None
         self.device = device # 0,1 for GPU; 'cpu' for CPU
         self.use_csrt = use_csrt
         self.p_track_count = 0
@@ -111,9 +118,9 @@ class ObjectDetectionTracker:
                 
                 ## Overlap check, if needed
                 if self.overlap_frames is not None and self.overlap_check_count >= self.overlap_frames:
-                    results = self.model.predict(frame, **kwargs)
+                    results = self.model.predict(frame, verbose=False, **kwargs)
                     if len(results) == 0:
-                        return []
+                        pass
                     
                     boxes = None
                     for result in results:
@@ -121,8 +128,8 @@ class ObjectDetectionTracker:
                         if 0 not in classes:
                             continue
 
-                        boxes = result.boxes.xyxy.cpu().numpy().astype(int)
-                        confidences = result.boxes.conf.cpu().numpy()
+                        boxes = result.boxes.xyxy.cpu().numpy().astype(int) 
+                        confidences = result.boxes.conf.cpu().numpy().astype(float)
                         filtered_classes = [i for i, class_id in enumerate(classes) if class_id == 0]
                         filtered_confidences = [i for i in filtered_classes if confidences[i] > 0.5]
                         filtered_indices = list(set(filtered_classes).intersection(filtered_confidences))
@@ -140,14 +147,23 @@ class ObjectDetectionTracker:
                     detected_box = (x1, y1, x2 - x1, y2 - y1)
                     overlap = overlap_check(self.p_coords, detected_box)
                     if overlap < 0.10:
-                        print(f"Overlap is {overlap}. Resetting tracker")
-                        self.p_tracker = None
-                        self.overlap_check_count = 0
-                        return []
+                        self.lost_tracking_count += 1
+                        print(f"Overlap is {overlap}. Lost tracking count is {self.lost_tracking_count}")
+                        if self.lost_tracking_count >= 10:
+                            print(f"Overlap is {overlap}. Resetting tracker")
+                            self.p_tracker = None
+                            self.lost_tracking_count = 0
+                            self.overlap_check_count = 0
+                            return []
+                        else:
+                            return []
+                    
+                    else:
+                        self.lost_tracking_count = 0
                     self.overlap_check_count = 0
                 else:
                     self.overlap_check_count += 1
-
+                    
             else:
                 self.lost_tracking_count += 1
                 if self.p_track_count > 5:
@@ -160,15 +176,17 @@ class ObjectDetectionTracker:
 
         elif self.p_tracker is None:
             results = self.model.predict(frame, **kwargs)
+            if len(results) == 0:
+                return []
             for result in results:
-                classes = result.boxes.cls.cpu().numpy().astype(int)
+                classes =  result.boxes.cls.cpu().numpy().astype(int)
                 if 0 not in classes:
                     if result == results[-1]:
                         return []
                     else:
                         continue
 
-                boxes = result.boxes.xyxy.cpu().numpy().astype(int)
+                boxes = result.boxes.xyxy.cpu().numpy().astype(int) 
                 filtered_indices = [i for i, class_id in enumerate(classes) if class_id == 0]
                 boxes = [boxes[i] for i in filtered_indices]
                     
@@ -185,8 +203,7 @@ class ObjectDetectionTracker:
                     w = int(w * (1 - 0.5)) if w > frame.shape[1]*0.5 else w
                     h = int(h * (1 - 0.5)) if h > frame.shape[0]*0.5 else h
                     
-            #Start CSRT tracker
-            #self.p_tracker = cv2.TrackerKCF_create()
+      
             self.p_tracker = cv2.TrackerCSRT_create(self.csrt_params)    
             self.p_tracker.init(frame, (x,y,w,h)) 
             
