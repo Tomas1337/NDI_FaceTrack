@@ -1,8 +1,6 @@
 from PySide2.QtCore import QTextStream, QFile, QDateTime, QSize, Qt, QTimer,QRect, QThread, QObject, Signal, Slot, QAbstractNativeEventFilter, QAbstractEventDispatcher
 from PySide2.QtWidgets import (QShortcut, QApplication, QCheckBox, QComboBox, QGridLayout, QGroupBox, QHBoxLayout, QLabel, QBoxLayout, QProgressBar, QPushButton, QButtonGroup, QSlider, QStyleFactory, QTableWidget, QTabWidget, QTextEdit, QVBoxLayout, QWidget, QAbstractButton, QMainWindow, QAction, QMenu, QStyleOptionSlider, QStyle, QSpacerItem, QSizePolicy)
 from PySide2.QtGui import QKeySequence, QImage, QPixmap, QPainter, QBrush, QFont, QIcon
-from face_tracking.objcenter import *
-from face_tracking.camera_control import *
 from ndi_camera import ndi_camera
 from tool.info_logging import add_logger
 import numpy as np
@@ -14,7 +12,6 @@ from tool.pipeclient import PipeClient
 from tool.payloads import *
 from tool.utils import str2bool
 from tool.pyqtkeybind import keybinder
-from TrackingServer_FastAPI import main as app_main
 from multiprocessing import Process
 import debugpy
 debugpy.listen(("localhost", 5678))
@@ -87,7 +84,7 @@ class MainWindow(QMainWindow):
 
     def _connectSignals(self):
         self.signalStatus.connect(self.gui.updateStatus)
-        self.track_type_signal.connect(self.face_detector.set_track_type)
+        self.track_type_signal.connect(self.person_detector.set_track_type)
         self.sources.aboutToShow.connect(self.camera.findSources)
         self.sources.aboutToShow.connect(self.camera_thread.start)
         #self.aboutToQuit.connect(self.forceWorkerQuit)
@@ -121,8 +118,8 @@ class MainWindow(QMainWindow):
         self.vid_worker_thread = QThread()
         self.vid_worker.moveToThread(self.vid_worker_thread)
 
-        self.face_detector = DetectionWidget()
-        self.face_detector.moveToThread(self.vid_worker_thread)
+        self.person_detector = DetectionWidget()
+        self.person_detector.moveToThread(self.vid_worker_thread)
         self.vid_worker_thread.start()
 
         #Connect worker signals
@@ -134,30 +131,30 @@ class MainWindow(QMainWindow):
         self.camera.enable_controls_signal.connect(self.gui.enable_controls)
         self.camera.face_track_button_click.connect(self.gui.face_track_button_click)
 
-        self.vid_worker.FaceFrameSignal.connect(self.face_detector.server_transact)
+        self.vid_worker.FaceFrameSignal.connect(self.person_detector.server_transact)
         self.vid_worker.DisplayNormalVideoSignal.connect(self.gui.setImage)
         self.vid_worker.FPSSignal.connect(self.gui.updateFPS)
         
-        self.face_detector.CameraZoomControlSignal.connect(self.vid_worker.zoom_camera_control)
-        self.face_detector.DisplayVideoSignal.connect(self.gui.setImage)
-        self.face_detector.CameraControlSignal.connect(self.vid_worker.camera_control)
-        self.face_detector.CameraControlSignal.connect(self.gui.update_speed)
-        self.face_detector.info_status.connect(self.gui.updateInfo)
-        self.face_detector.signalStatus.connect(self.gui.updateStatus)
+        self.person_detector.CameraZoomControlSignal.connect(self.vid_worker.zoom_camera_control)
+        self.person_detector.DisplayVideoSignal.connect(self.gui.setImage)
+        self.person_detector.CameraControlSignal.connect(self.vid_worker.camera_control)
+        self.person_detector.CameraControlSignal.connect(self.gui.update_speed)
+        self.person_detector.info_status.connect(self.gui.updateInfo)
+        self.person_detector.signalStatus.connect(self.gui.updateStatus)
 
-        self.gui.reset_track_button.clicked.connect(self.face_detector.reset_tracker)
-        self.gui.azoom_lost_face_button.clicked.connect(self.face_detector.detect_autozoom_state)
-        self.gui.y_enable_button.clicked.connect(self.face_detector.detect_ytrack_state)
-        self.gui.gamma_slider.valueChanged.connect(self.face_detector.gamma_slider_values)
-        self.gui.x_minE_slider.valueChanged.connect(self.face_detector.xmin_e_val)
-        self.gui.y_minE_slider.valueChanged.connect(self.face_detector.ymin_e_val)  
+        self.gui.reset_track_button.clicked.connect(self.person_detector.reset_tracker)
+        self.gui.azoom_lost_face_button.clicked.connect(self.person_detector.detect_autozoom_state)
+        self.gui.y_enable_button.clicked.connect(self.person_detector.detect_ytrack_state)
+        self.gui.gamma_slider.valueChanged.connect(self.person_detector.gamma_slider_values)
+        self.gui.x_minE_slider.valueChanged.connect(self.person_detector.xmin_e_val)
+        self.gui.y_minE_slider.valueChanged.connect(self.person_detector.ymin_e_val)  
         self.gui.zoom_slider.valueChanged.connect(self.vid_worker.zoom_handler)
         
         self.gui.face_track_button.clicked.connect(self.vid_worker.detect_face_track_state)
-        self.gui.face_track_button.toggled.connect(self.face_detector.pipeStart)
+        self.gui.face_track_button.toggled.connect(self.person_detector.pipeStart)
 
         self.gui.reset_default_button.clicked.connect(self.gui.reset_defaults_handler)
-        self.gui.home_pos.mouseReleaseSignal.connect(self.face_detector.setTrackPosition)
+        self.gui.home_pos.mouseReleaseSignal.connect(self.person_detector.setTrackPosition)
 
         self.preset_camera_signal.connect(self.camera.connect_to_preset_camera)
         self.gui.face_track_button.clicked.connect(lambda state: self.camera.camera_control(0.0,0.0))
@@ -585,7 +582,7 @@ class Video_Object(QObject):
         self.DisplayNormalVideoSignal.emit(image)
 
     @Slot(float, float)
-    def camera_control(self, Xspeed, Yspeed, repeat=3):
+    def camera_control(self, Xspeed, Yspeed, repeat=2):
         """
         Function to send out the X-Y Vectors to the camera directly
         The loop helps the control of how many times the vectors are sent in one call
@@ -642,6 +639,7 @@ class DetectionWidget(QObject):
         frame (np.ndarray): image frame sent to the server,
         """
         #Sending using Pydantic payloads
+        #debugpy.breakpoint()
         parameter_payload = PipeClient_Parameter_Payload(target_coordinate_x = self.center_coords[0],
             target_coordinate_y = self.center_coords[1],
             track_type = self.track_type,
@@ -773,7 +771,7 @@ class DetectionWidget(QObject):
     @Slot(int, int)
     def setTrackPosition(self, xVel, yVel):
         self.center_coords = (xVel, yVel)
-        print(f'setTrackPosition coordinates are {self.center_coords}. Received from {self.sender()} x:{xVel} y:{yVel}')
+        print(f'setTrackPosition coordinates are {self.center_coords}. Received x:{xVel} y:{yVel}')
 
     @Slot(int)
     def set_track_type(self, track_type):
@@ -826,9 +824,11 @@ def main(args = None):
         #retVal = DialogBox()
         # exit()
         # @TODO: Start the server in the background
-        print('Trying to start own Server')
-        fastapi_process = Process(target = app_main)
-        fastapi_process.start()
+        # print('Trying to start own Server')
+        # from TrackingServer_FastAPI import main as app_main
+        # fastapi_process = Process(target = app_main)
+        # fastapi_process.start()
+        pass
 
             
     args_dict = vars(args)

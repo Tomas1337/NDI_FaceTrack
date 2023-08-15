@@ -6,6 +6,15 @@ endpoint.proto
 debug.log
 program.prof
 python-probe.log
+.venvBuildBinary/*
+dist/*
+build/*
+face_tracking/__pycache__/*
+deep-person-reid/
+.vscode/__pycache__/preview/*
+__pycache__/*
+__pycache__/*.pyc
+__pycache__/
 test/__pycache__/__init__.cpython-38.pyc
 test/__pycache__/test_BirdDog_TrackingModule.cpython-38-pytest-6.2.2.pyc
 test/__pycache__/test_encoding_speed.cpython-38-pytest-6.2.2.pyc
@@ -67,3 +76,11 @@ __pycache__/config.cpython-37.pyc
 __pycache__/config.cpython-38.pyc
 __pycache__/ndi_camera.cpython-38.pyc
 datasets/
+wandb/
+runs/*
+runs/
+runs/detect/*
+models/backbones/*
+models/osnet_x0_25_msmt17.pth
+tool/pyqtkeybind/win/__pycache__/*
+tool/pyqtkeybind/__pycache__/*

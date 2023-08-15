@@ -1,20 +1,17 @@
-import time, win32file, win32pipe, cv2, json, requests
+import time, win32file, win32pipe, cv2
 import numpy as np 
-import uvicorn, pywintypes, pickle
+import uvicorn, pywintypes
 from config import CONFIG
-from multiprocessing import Process
-from fastapi import FastAPI, File, Body, WebSocket
+from fastapi import FastAPI
 from fastapi.responses import HTMLResponse, JSONResponse
-#from fastapi.testclient import TestClient
 from fastapi.openapi.utils import get_openapi
-from starlette.responses import StreamingResponse
 from pydantic import BaseModel
-#from turbojpeg import TurboJPEG, TJPF_GRAY, TJSAMP_GRAY, TJFLAG_PROGRESSIVE
 from threading import Thread
 from BirdDog_TrackingModule import DetectionWidget, tracker_main
 from tool.pipeclient import PipeClient 
 from tool.payloads import *
 from routers import websockets
+import os
 
 BUFFERSIZE = 921654
 IMAGE_WIDTH = 640
@@ -104,6 +101,11 @@ def start_tracking_pipe(pipe_handle):
         if res == 0:
             print(f"SetNamedPipeHandleState return code: {res}")
         
+        turbojpg_decoding = CONFIG.getboolean('server', 'turbojpeg')
+        if turbojpg_decoding:
+            from turbojpeg import TurboJPEG
+            jpeg_decoder = TurboJPEG()
+            
         while track_flag is True:   
             try:
                 #Read Pipe in bytes form
@@ -112,9 +114,12 @@ def start_tracking_pipe(pipe_handle):
                 #Parse using Python Pickle
                 data = PipeClient.unpickle_object(raw_data[1])
                 if data.__repr_name__() == PipeClient_Image_Payload().__repr_name__():
-                    
-                    nparr = np.frombuffer(data.frame, np.uint8)
-                    frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+                    # TurboJPEG vs OpenCV has 1.6x decoding speed difference but TurboJPEG comes with installation overhead for system
+                    if turbojpg_decoding:
+                        frame = jpeg_decoder.decode(data.frame)
+                    else:
+                        nparr = np.frombuffer(data.frame, np.uint8)
+                        frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
                     output = tracker_main(Tracker, frame)
 
                 elif data.__repr_name__() == PipeClient_Parameter_Payload().__repr_name__():
@@ -150,6 +155,9 @@ def start_tracking_pipe(pipe_handle):
         else:
             print(e)
         print("finished now")
+    
+    except Exception as e:
+        print(f"Pickle error: {e}")
 
     finally:
         win32pipe.DisconnectNamedPipe(pipe_handle)
@@ -246,11 +254,12 @@ class Tracker_Object():
         self.bounding_boxes = bounding_box
 
 def main():
+    is_production = os.environ.get("PRODUCTION", False)
     uvicorn.run(app="TrackingServer_FastAPI:app", 
         host=CONFIG.get('server','host'), 
         port=CONFIG.getint('server','port'), 
         workers=CONFIG.getint('server','workers'),
-        reload=True)
+        reload= not CONFIG.getboolean('server','production'),)
 
 if __name__ == '__main__':
     main()

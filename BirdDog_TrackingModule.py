@@ -34,9 +34,6 @@ class DetectionWidget():
         self.f_tracker = None
         self.p_tracker = None
 
-        #Toggle for face recognition
-        self.f_recognition = False
-
         #Slider and button Values
         self.track_type = 0
         self.y_track_state = True
@@ -66,7 +63,8 @@ class DetectionWidget():
         self.last_loc = None
         
         # Detector and Tracker 
-        self.tracker = ObjectDetectionTracker(yolo_model_path='models/yolov8n_640.onnx', task='detect', use_csrt=True)
+        self.tracker = ObjectDetectionTracker(yolo_model_path='models/yolov8n_640.onnx', 
+            task='detect', use_csrt=True, overlap_frames=None, device='cpu')
         
     def is_valid_coords(self, coords):
         """
@@ -105,7 +103,7 @@ class DetectionWidget():
         return x_speed, y_speed
 
 
-    def main_track(self, frame, skip_frames=5, fallback_delay=5):
+    def main_track(self, frame, skip_frames=None, fallback_delay=5):
         """
         Takes in a list where the first element is the frame
         The second element are the target coordinates of the tracker
@@ -117,13 +115,14 @@ class DetectionWidget():
         if not hasattr(self, 'frame_count'):
             self.frame_count = 0
             
-        # Only perform detection every 'skip_frames' frames
-        if self.frame_count % (skip_frames+1) != 1:
+        #Only perform detection every 'skip_frames' frames
+        if skip_frames and self.frame_count % (skip_frames+1) != 1:
             # Sped down x_speed_history approaching 0 linearly
-            x_speed = self.x_speed_history[-1] * (skip_frames+1) / self.frame_count if len(self.x_speed_history) > 0 else 0.0
-            y_speed = self.y_speed_history[-1] * (skip_frames+1) / self.frame_count if len(self.y_speed_history) > 0 else 0.0
-            
+            # x_speed = self.x_speed_history[-1] * (skip_frames+1) / self.frame_count if len(self.x_speed_history) > 0 else 0.0
+            # y_speed = self.y_speed_history[-1] * (skip_frames+1) / self.frame_count if len(self.y_speed_history) > 0 else 0.0            
             self.frame_count += 1
+            x_speed = self.x_prev_speed
+            y_speed = self.y_prev_speed
             return (x_speed, y_speed)
         
         self.track_coords = []
@@ -148,6 +147,7 @@ class DetectionWidget():
         for result in results:
             box = result["box"]
             body_coords = box
+            face_coords = box
         if len(results) == 0:
             face_coords=None
         
@@ -191,7 +191,6 @@ class DetectionWidget():
 
         ## Probabilistic Smoothing
         x_speed, y_speed = self.process_speed_history(x_speed, y_speed) if bool(CONFIG.getboolean('camera_control', 'speed_history_smoothing')) else (x_speed, y_speed)
-        #print(f"Time taken for main_track: {(time.time() - start)}. Tracking ID {self.tracked_id} xSpeed: {x_speed}, ySpeed: {y_speed}")
 
         return (x_speed, y_speed)
 
@@ -347,7 +346,7 @@ def tracker_main(Tracker, frame, custom_parameters = {}):
         return 0
     
     Tracker.set_tracker_parameters(custom_parameters)
-    x_velocity, y_velocity = Tracker.main_track(frame, skip_frames=2)
+    x_velocity, y_velocity = Tracker.main_track(frame, skip_frames=None)
     #print(f"Tracker has returned with x_velocity: {x_velocity}, y_velocity: {y_velocity}")
     track_coords = Tracker.get_bounding_boxes()
     

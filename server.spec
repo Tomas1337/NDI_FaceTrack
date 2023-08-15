@@ -1,7 +1,7 @@
 # -*- mode: python ; coding: utf-8 -*-
 
 block_cipher = None
-excluded_modules = ['torch.distributions']
+excluded_modules = ['torch.distributions' ,'PySide2']
 
 
 server = Analysis(['pyinstaller_server.py'],
@@ -33,7 +33,7 @@ server_exe = EXE(server_pyz,
           [],
           exclude_binaries=True,
           name='NDI_FaceTrack',
-          debug=False,
+          debug=True,
           bootloader_ignore_signals=False,
           strip=False,
           upx=True,

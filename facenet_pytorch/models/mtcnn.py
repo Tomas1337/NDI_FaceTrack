@@ -343,11 +343,12 @@ class MTCNN(nn.Module):
         """
 
         with torch.no_grad():
+            is_np_ndarray = isinstance(img, np.ndarray)
             batch_boxes, batch_points = detect_face(
                 img, self.min_face_size,
                 self.pnet, self.rnet, self.onet,
                 self.thresholds, self.factor,
-                self.device
+                self.device, is_np_ndarray
             )
 
         boxes, probs, points = [], [], []
