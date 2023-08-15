@@ -6,6 +6,11 @@ endpoint.proto
 debug.log
 program.prof
 python-probe.log
+.venvBuildBinary/*
+dist/*
+build/*
+face_tracking/__pycache__/*
+.vscode/__pycache__/preview/*
 test/__pycache__/__init__.cpython-38.pyc
 test/__pycache__/test_BirdDog_TrackingModule.cpython-38-pytest-6.2.2.pyc
 test/__pycache__/test_encoding_speed.cpython-38-pytest-6.2.2.pyc
