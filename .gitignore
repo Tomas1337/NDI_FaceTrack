@@ -6,7 +6,7 @@ endpoint.proto
 debug.log
 program.prof
 python-probe.log
-.venvBuildBinary/*
+.venvBuildBinary/
 dist/*
 build/*
 face_tracking/__pycache__/*
