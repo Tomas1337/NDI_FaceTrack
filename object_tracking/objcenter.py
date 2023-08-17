@@ -2,7 +2,8 @@ import cv2
 import os, time
 import numpy as np
 from tool.utils import overlap_check
-from .onnx_yolov8 import ResultItem, BoxResult, Result, NumpyWrapper
+from .onnx_yolov8 import BoxResult, Result
+from config import TRACK_TYPE_DICT
 CURR_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),".."))
 
 from config import CONFIG
@@ -78,7 +79,9 @@ class FastMTCNN(object):
 
         
 class ObjectDetectionTracker:
-    def __init__(self, yolo_model_path, device=0, use_csrt=False, track_type='face', overlap_frames=None, **kwargs):
+    def __init__(self, yolo_model_path, device=0, use_csrt=False, track_type='face', 
+            debug_show=False, overlap_frame_check=None, **kwargs):
+        
         self.general_detector = GeneralDetector(yolo_model_path, track_type)
         self.device = device # 0,1 for GPU; 'cpu' for CPU
         self.use_csrt = use_csrt
@@ -87,8 +90,9 @@ class ObjectDetectionTracker:
         self.lost_tracking_count = 0
         self.check_count = 0 
         self.track_type = track_type
-        self.overlap_frames = overlap_frames
+        self.overlap_frames = overlap_frame_check
         self.overlap_check_count = 0
+        self.debug_show = debug_show
         
         if self.use_csrt:
             params = cv2.TrackerCSRT_Params()
@@ -108,11 +112,13 @@ class ObjectDetectionTracker:
             
             self.csrt_params = params
             self.tracking=False
-    
+
     def track_with_csrt(self, source=None, imgsz=640, **kwargs):
+        self.track_type = kwargs.get('track_type', self.track_type)
+        self.general_detector.track_type = TRACK_TYPE_DICT.get(self.track_type, 'face')
         original_h, original_w = source.shape[:2]  # Save the original frame size
-        scale_x = 1#original_w / imgsz
-        scale_y = 1#original_h / imgsz
+        scale_x = original_w / imgsz
+        scale_y = original_h / imgsz
         frame = cv2.resize(source, (imgsz, imgsz))
 
         if self.p_tracker:
@@ -124,62 +130,24 @@ class ObjectDetectionTracker:
                 x,y,w,h = [int(i) for i in [x,y,w,h]]
                 self.p_track_count = 0
                 
+                if self.debug_show:
+                    cv2.rectangle(frame, (x,y), (x+w,y+h), (255,0,255), 1)
+                    cv2.imshow('P Tracker', frame)
+                    cv2.waitKey(1)
+                
                 ## Overlap check, if needed
+                self.overlap_check_count += 1
                 if self.overlap_frames is not None and self.overlap_check_count >= self.overlap_frames:
-                    results = self.model.predict(frame, verbose=False, **kwargs)
-                    if len(results) == 0:
-                        pass
-                    
-                    boxes = None
-                    for result in results:
-                        classes = result.boxes.cls.cpu().numpy().astype(int)
-                        if 0 not in classes:
-                            continue
-
-                        boxes = result.boxes.xyxy.cpu().numpy().astype(int) 
-                        confidences = result.boxes.conf.cpu().numpy().astype(float)
-                        filtered_classes = [i for i, class_id in enumerate(classes) if class_id == 0]
-                        filtered_confidences = [i for i in filtered_classes if confidences[i] > 0.5]
-                        filtered_indices = list(set(filtered_classes).intersection(filtered_confidences))
-                        boxes = [boxes[i] for i in filtered_indices]
-                        confidences = [confidences[i] for i in filtered_indices]
-                        
-                        # sort by the confidence
-                        boxes = [box for _, box in sorted(zip(confidences, boxes), key=lambda pair: pair[0], reverse=True)]
-                    
-                    if boxes is None or len(boxes) == 0:
+                    if not self.check_overlap(frame, **kwargs):
                         return []
-
-                    x1, y1, x2, y2 = [int(i) for i in boxes[0]]
-
-                    detected_box = (x1, y1, x2 - x1, y2 - y1)
-                    overlap = overlap_check(self.p_coords, detected_box)
-                    if overlap < 0.10:
-                        self.lost_tracking_count += 1
-                        print(f"Overlap is {overlap}. Lost tracking count is {self.lost_tracking_count}")
-                        if self.lost_tracking_count >= 10:
-                            print(f"Overlap is {overlap}. Resetting tracker")
-                            self.p_tracker = None
-                            self.lost_tracking_count = 0
-                            self.overlap_check_count = 0
-                            return []
-                        else:
-                            return []
-                    
-                    else:
-                        self.lost_tracking_count = 0
-                    self.overlap_check_count = 0
-                else:
-                    self.overlap_check_count += 1
                     
             else:
                 self.lost_tracking_count += 1
                 if self.p_track_count > 5:
                     self.p_tracker = None
-                    return []
                 else:
                     self.p_track_count += 1
-                    return []
+                return []
                 
 
         elif self.p_tracker is None:
@@ -223,6 +191,58 @@ class ObjectDetectionTracker:
         
     def reset_tracker(self):
         self.p_tracker = None
+        
+    def check_overlap(self, frame, **kwargs):
+        results = self.general_detector.detect(frame, verbose=False, minConf=0.4, **kwargs)
+        
+        # No detections on current frame
+        if not results:
+            return None
+
+        boxes = None
+        for result in results:
+            classes = result.boxes.cls.cpu().numpy().astype(int)
+            if 0 not in classes:
+                continue
+
+            boxes = result.boxes.xyxy.cpu().numpy().astype(int)
+            confidences = result.boxes.conf.cpu().numpy().astype(float)
+            filtered_classes = [i for i, class_id in enumerate(classes) if class_id == 0]
+            filtered_confidences = [i for i in filtered_classes if confidences[i] > 0.5]
+            filtered_indices = list(set(filtered_classes).intersection(filtered_confidences))
+            boxes = [boxes[i] for i in filtered_indices]
+            confidences = [confidences[i] for i in filtered_indices]
+
+            # sort by the confidence
+            boxes = [box for _, box in sorted(zip(confidences, boxes), key=lambda pair: pair[0], reverse=True)]
+
+        if not boxes:
+            return None
+
+        x1, y1, x2, y2 = [int(i) for i in boxes[0]]
+        detected_box = (x1, y1, x2 - x1, y2 - y1)
+        cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 0, 255), 2)  # Draw detected box in red
+        px, py, pw, ph = self.p_coords
+        cv2.rectangle(frame, (px, py), (px + pw, py + ph), (255, 0, 0), 2)  # Draw self.p_coords in blue
+
+        if self.debug_show:
+            cv2.imshow('Overlap', frame)
+            cv2.waitKey(1)
+            
+        overlap = overlap_check(self.p_coords, detected_box)
+        if overlap < 0.10:
+            self.lost_tracking_count += 1
+            print(f"Overlap is {overlap}. Lost tracking count is {self.lost_tracking_count}")
+            if self.lost_tracking_count >= 10:
+                print(f"Overlap is {overlap}. Resetting tracker")
+                self.p_tracker = None
+                self.lost_tracking_count = 0
+                self.overlap_check_count = 0
+                return False
+        else:
+            self.lost_tracking_count = 0
+        self.overlap_check_count = 0
+        return True
 
 class GeneralDetector:
     def __init__(self, yolo_model_path, track_type='fallback'):
@@ -234,18 +254,18 @@ class GeneralDetector:
         self.face_detector = FastMTCNN()
         self.track_type = track_type
 
-    def detect(self, frame, minConf=0.9):
+    def detect(self, frame, minConf=0.9, **kwargs):
         if self.track_type == 'face':
             return self.face_detector.update(frame, minConf=0.2)
-        elif self.track_type == 'person':
-            return self._detect_person(frame, minConf)
-        else: # "Fallback face > body"
+        elif self.track_type == 'body':
+            return self._detect_body(frame, minConf)
+        else: # "Fallback face > person"
             face_result = self.face_detector.update(frame, minConf)
             if face_result:
                 return face_result
-            return self._detect_person(frame, minConf)
+            return self._detect_body(frame, minConf)
 
-    def _detect_person(self, frame, minConf):
+    def _detect_body(self, frame, minConf):
         results = self.yolo_model.predict(frame)
         return results
         # if len(results) == 0:

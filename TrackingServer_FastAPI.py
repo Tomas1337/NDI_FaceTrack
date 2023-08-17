@@ -7,7 +7,7 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.openapi.utils import get_openapi
 from pydantic import BaseModel
 from threading import Thread
-from BirdDog_TrackingModule import DetectionWidget, tracker_main
+from BirdDog_TrackingModule import DetectionMananger, tracker_main
 from tool.pipeclient import PipeClient 
 from tool.payloads import *
 from routers import websockets
@@ -17,7 +17,6 @@ BUFFERSIZE = 921654
 IMAGE_WIDTH = 640
 IMAGE_HEIGHT = 360
 
-# jpeg = TurboJPEG()
 app = FastAPI()
 app.include_router(websockets.router)
 
@@ -89,7 +88,7 @@ def start_pipe_server():
     return response
 
 def start_tracking_pipe(pipe_handle):
-    Tracker = DetectionWidget()
+    Tracker = DetectionMananger()
     track_flag = True
 
     try:
@@ -229,29 +228,6 @@ def check_tracking_server():
         
     finally:
         return response
-
-class Tracker_Object():
-    def __init__(self):
-        self.tracker = DetectionWidget()
-
-    def track_frame(self, frame):  
-        target_coordinates = (50,50)
-        custom_parameters = {'gamma':0.0}
-        if frame is not None:
-            output = tracker_main(self.tracker, frame, target_coordinates, custom_parameters)
-            bb_box = output.get('boundingBox')
-            self.set_bounding_boxes(bb_box)
-
-            return output
-        else:
-            print('frame is none')
-            return None
-
-    def get_bounding_boxes(self):
-        return self.bounding_boxes
-
-    def set_bounding_boxes(self, bounding_box):
-        self.bounding_boxes = bounding_box
 
 def main():
     is_production = os.environ.get("PRODUCTION", False)

@@ -1,14 +1,14 @@
 from object_tracking.camera_control import *
 from object_tracking.objcenter import *
 from tool.custom_widgets import *
-from config import CONFIG
+from config import CONFIG, TRACK_TYPE_DICT
 import time, cv2
 from tool.info_logging import add_logger
 from decimal import Decimal
 from collections import deque
 import numpy as np
 
-class DetectionWidget():
+class DetectionMananger():
     
     def __init__(self):
         FRAME_WIDTH = 640
@@ -26,7 +26,7 @@ class DetectionWidget():
         self.lost_tracking = 0
         self.lost_tracking_count = 0
         self.f_track_count = 0
-        self.overlap_counter = 0
+
         self.lost_t = 0
 
         #Trackers
@@ -64,7 +64,8 @@ class DetectionWidget():
         
         # Detector and Tracker 
         self.tracker = ObjectDetectionTracker(yolo_model_path='models/yolov8n_640.onnx', 
-            task='detect', use_csrt=True, overlap_frames=None, device='cpu')
+            task='detect', use_csrt=True, overlap_frame_check=50, debug_show=True,
+            device='cpu', track_type=TRACK_TYPE_DICT.get(self.track_type,0))
         
     def is_valid_coords(self, coords):
         """
@@ -138,7 +139,7 @@ class DetectionWidget():
         centerX = self.target_coordinate_x
         centerY = self.target_coordinate_y
     
-        results =  self.tracker.track_with_csrt(frame, device='cpu', imgsz=640)
+        results =  self.tracker.track_with_csrt(frame, device='cpu', imgsz=640, track_type=self.track_type)
         #print(f"Time taken for detection and tracking: {time.time() - s1_time}")
         
         face_coords = None
@@ -150,6 +151,7 @@ class DetectionWidget():
             face_coords = box
         if len(results) == 0:
             face_coords=None
+            #return (0.0, 0.0)
         
         if self.is_valid_coords(face_coords):
             x, y, w, h = face_coords
@@ -158,7 +160,6 @@ class DetectionWidget():
         elif self.is_valid_coords(body_coords):
             x, y, w, h = body_coords
             self.track_coords = [x, y, x + w, y + h]
-            self.overlap_counter = 0
             face_track_flag = False
         else:
             face_track_flag = False
@@ -294,7 +295,7 @@ def tracker_main(Tracker, frame, custom_parameters = {}):
     """
     Inputs come from the UI:
         Tracker: Object
-            - An initated DetectionWidget
+            - An initated Detection Manager
         frame: Numpy array
             -3 Channel with dimensions of (H, W, C); 
 
@@ -377,7 +378,7 @@ if __name__ == '__main__':
     FRAME_WIDTH = 640
     FRAME_HEIGHT = 360
 
-    Tracker = DetectionWidget()
+    Tracker = DetectionMananger()
     print('Starting new tracker?')
     args = {}
     tracker_main(*args)

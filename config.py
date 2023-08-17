@@ -14,3 +14,8 @@ def create_config(config_file=None):
     return parser
 
 CONFIG = create_config()
+TRACK_TYPE_DICT = {
+    0: 'face',
+    1: 'body',
+    2: 'fallback'
+    }
