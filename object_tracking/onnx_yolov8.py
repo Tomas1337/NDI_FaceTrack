@@ -48,7 +48,7 @@ class Result:
 CLASSES = ['person']
 
 class ONNX_YOLOv8:
-    def __init__(self, model_path=None, **kwargs):
+    def __init__(self, model_path=None, confidence_thres=0.75, iou_thres=0.45, nms_thres=0.5):
         if model_path is None:
             base_path = os.path.dirname(os.path.abspath(__file__))
             model_path = os.path.join(base_path, '..', 'models', 'yolov8n_640.onnx')
@@ -56,61 +56,68 @@ class ONNX_YOLOv8:
         opt_session.enable_mem_pattern = False
         opt_session.enable_cpu_mem_arena = False
         opt_session.graph_optimization_level = onnxruntime.GraphOptimizationLevel.ORT_DISABLE_ALL
-        EP_list = ['TensorrtExecutionProvider','CPUExecutionProvider']
+        EP_list = ['TensorrtExecutionProvider', 'CPUExecutionProvider']
         self.ort_session = onnxruntime.InferenceSession(model_path, providers=EP_list)
         self.input_names = [input.name for input in self.ort_session.get_inputs()]
         self.output_names = [output.name for output in self.ort_session.get_outputs()]
         self.model_type = 'onnxruntime'
-    
-    def predict(self, original_image, conf_threshold=0.75, iou_threshold=0.45, nms_threshold=0.5, **kwargs):
+        self.confidence_thres = confidence_thres
+        self.iou_thres = iou_thres
+        self.nms_thres = nms_thres
+
+    def preprocess(self, original_image):
         input_shape = self.ort_session.get_inputs()[0].shape[2:]
         original_shape = original_image.shape[:2]
         resized_image = cv2.resize(cv2.cvtColor(original_image, cv2.COLOR_BGR2RGB), tuple(input_shape))
         scaling_factor_x = original_shape[1] / input_shape[1]
         scaling_factor_y = original_shape[0] / input_shape[0]
-        resized_image = resized_image.transpose(2,0,1)      
-        resized_image = resized_image.astype(np.float32) / 255.0  
+        resized_image = resized_image.transpose(2, 0, 1)
+        resized_image = resized_image.astype(np.float32) / 255.0
         resized_image = resized_image.reshape(1, resized_image.shape[0], resized_image.shape[1], resized_image.shape[2])
-        
-        outputs = self.ort_session.run(self.output_names, {self.input_names[0]: resized_image})[0]
+        return resized_image, scaling_factor_x, scaling_factor_y
+    
+    def postprocess(self, outputs, scaling_factor_x, scaling_factor_y):
+        outputs = np.transpose(np.squeeze(outputs[0]))
+        rows = outputs.shape[0]
         boxes = []
         scores = []
         class_ids = []
 
-        for i in range(8400): # Iterate through possible detected objects
-            box_coords = outputs[0][:4, i]
-            classes_scores = outputs[0][4:, i]
-            (minScore, maxScore, minClassLoc, (x, maxClassIndex)) = cv2.minMaxLoc(classes_scores)
-            if maxScore >= conf_threshold:
-                box = [
-                    box_coords[0] - (0.5 * box_coords[2]), box_coords[1] - (0.5 * box_coords[3]),
-                    box_coords[2], box_coords[3]]
-                boxes.append(box)
-                scores.append(maxScore)
-                class_ids.append(maxClassIndex)
+        for i in range(rows):
+            classes_scores = outputs[i][4:]
+            max_score = np.amax(classes_scores)
+            if max_score >= self.confidence_thres:
+                class_id = np.argmax(classes_scores)
+                x, y, w, h = outputs[i][0], outputs[i][1], outputs[i][2], outputs[i][3]
+                left = int((x - w / 2) * scaling_factor_x)
+                top = int((y - h / 2) * scaling_factor_y)
+                width = int(w * scaling_factor_x)
+                height = int(h * scaling_factor_y)
+                class_ids.append(class_id)
+                scores.append(max_score)
+                boxes.append([left, top, width, height])
 
-        # Apply Non-Maximum Suppression (NMS) to filter the results
-        result_boxes = cv2.dnn.NMSBoxes(boxes, scores, conf_threshold, iou_threshold, nms_threshold)
+        indices = cv2.dnn.NMSBoxes(boxes, scores, self.confidence_thres, self.iou_thres)
         result_items = []
-        
-        for i in range(len(result_boxes)):
-            index = result_boxes[i]
+
+        for i in indices:
+            index = i  # Accessing the index correctly
             box = boxes[index]
-            xyxy = np.array([
-                box[0] * scaling_factor_x,
-                box[1] * scaling_factor_y,
-                (box[0] + box[2]) * scaling_factor_x,
-                (box[1] + box[3]) * scaling_factor_y
-            ])
-            boxes_obj = BoxResult(
-                xyxy=xyxy[np.newaxis, :],
-                cls=np.array([class_ids[index]]).astype(int),
-                conf=np.array([scores[index]])
-            )
+            xyxy = np.array([box[0], box[1], box[0] + box[2], box[1] + box[3]])
+            boxes_obj = BoxResult(xyxy=xyxy[np.newaxis, :], cls=np.array([class_ids[index]]).astype(int), conf=np.array([scores[index]]))
             result_item = Result(boxes=boxes_obj)
             result_items.append(result_item)
 
         return result_items
+
+
+
+    def predict(self, original_image):
+        preprocessed_image, scaling_factor_x, scaling_factor_y = self.preprocess(original_image)
+        outputs = self.ort_session.run(self.output_names, {self.input_names[0]: preprocessed_image})[0]
+        result_items = self.postprocess(outputs, scaling_factor_x, scaling_factor_y)
+        return result_items
+
 
 def test_onnxruntime_match():
     # Example usage

@@ -617,7 +617,7 @@ class Video_Object(QObject):
             Repeat (int, optional): Number of times to send the vectors to the NDI. Defaults to 2.
         """
         for i in range(1,repeat):
-            print(f'Camera Control X:{Xspeed}  Y:{Yspeed}')
+            print(f"AT@X at CAMERA_CONTROL:{Xspeed} Y:{Yspeed}")
             ndi.recv_ptz_pan_tilt_speed(self.ndi_recv, Xspeed, Yspeed)
 
     @Slot(float)
@@ -690,18 +690,16 @@ class DetectionWidget(QObject):
             response = None
         else:
             response = pickle.loads(response_pickled)
-    
-        #print(f'Response from pipe is {response} meme')
-        
+
         #Display frame
         if response:
             # Emit the signal of the x_velocity and y_velocity via the CameraControlSignal
             self.CameraControlSignal.emit(response.x_velocity, response.y_velocity)
-            print(f"AT@X X:{response.x_velocity} Y:{response.y_velocity}")
+            print(f"AT@X at SERVER_TRANSACT:{response.x_velocity} Y:{response.y_velocity}")
+
             
         if response and response.x:
-            bB = [response.x, response.y, response.w, response.h]
-            boundingBox = (bB[0],bB[1],bB[2]-bB[0],bB[3]-bB[1])
+            boundingBox = [response.x, response.y, response.w, response.h]
         else:        
             boundingBox = None
 

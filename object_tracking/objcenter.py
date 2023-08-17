@@ -93,6 +93,8 @@ class ObjectDetectionTracker:
         self.overlap_frames = overlap_frame_check
         self.overlap_check_count = 0
         self.debug_show = debug_show
+        self.bounding_box_edge_padding = 100
+        self.p_coords = None
         
         if self.use_csrt:
             params = cv2.TrackerCSRT_Params()
@@ -113,21 +115,26 @@ class ObjectDetectionTracker:
             self.csrt_params = params
             self.tracking=False
 
+    
+    def __del__(self):
+        cv2.destroyAllWindows()
+        
     def track_with_csrt(self, source=None, imgsz=640, **kwargs):
         self.track_type = kwargs.get('track_type', self.track_type)
         self.general_detector.track_type = TRACK_TYPE_DICT.get(self.track_type, 'face')
         original_h, original_w = source.shape[:2]  # Save the original frame size
-        scale_x = original_w / imgsz
-        scale_y = original_h / imgsz
+        scale_x = 1#original_w / imgsz
+        scale_y = 1#original_h / imgsz
         frame = cv2.resize(source, (imgsz, imgsz))
 
         if self.p_tracker:
             ok, position = self.p_tracker.update(frame)
             if ok:
-                x, y, w, h = map(int, position)
-                cv2.rectangle(frame, (x,y), (x+w,y+h), (255,0,0), 1)
-                x,y,w,h = [0 if i < 0 else i for i in [x,y,w,h]]
-                x,y,w,h = [int(i) for i in [x,y,w,h]]
+                # x, y, x2, y2 = map(int, position)
+                # w = x2 - x
+                # h = y2 - y
+                x, y, w, h = map(int, position)                    
+                x,y,w,h = [0 if i < 0 else int(i) for i in [x,y,w,h]]
                 self.p_track_count = 0
                 
                 if self.debug_show:
@@ -135,11 +142,13 @@ class ObjectDetectionTracker:
                     cv2.imshow('P Tracker', frame)
                     cv2.waitKey(1)
                 
+                w = int(w * (1 - 0.5)) if w > frame.shape[1]*0.5 else w
+                h = int(h * (0.75)) if h > frame.shape[0]*0.75 else h
                 ## Overlap check, if needed
                 self.overlap_check_count += 1
                 if self.overlap_frames is not None and self.overlap_check_count >= self.overlap_frames:
                     if not self.check_overlap(frame, **kwargs):
-                        return []
+                        self.p_tracker=None
                     
             else:
                 self.lost_tracking_count += 1
@@ -152,10 +161,12 @@ class ObjectDetectionTracker:
 
         elif self.p_tracker is None:
             results = self.general_detector.detect(frame, minConf=0.9)
-            if len(results) == 0:
+            if not results:
                 return []
             for result in results:
                 classes =  result.boxes.cls.cpu().numpy().astype(int)
+                confidences = result.boxes.conf.cpu().numpy().astype(float)
+
                 if 0 not in classes:
                     if result == results[-1]:
                         return []
@@ -165,23 +176,29 @@ class ObjectDetectionTracker:
                 boxes = result.boxes.xyxy.cpu().numpy().astype(int) 
                 filtered_indices = [i for i, class_id in enumerate(classes) if class_id == 0]
                 boxes = [boxes[i] for i in filtered_indices]
+                confidences = [confidences[i] for i in filtered_indices]
+                boxes = [box for _, box in sorted(zip(confidences, boxes), key=lambda pair: pair[0], reverse=True)]
                     
-                if len(boxes) == 0:
-                    return []
-                
-                for idx, box in enumerate(boxes):
-                    scaled_box = (box[0] * scale_x, box[1] * scale_y, box[2] * scale_x, box[3] * scale_y)
-                    scaled_box = [int(i) for i in scaled_box]
-                    x1,y1,x2,y2 = scaled_box
-                    x,y,w,h = x1,y1,x2-x1,y2-y1
-                  
-                    # Reducing the bounding box size around the center
-                    w = int(w * (1 - 0.5)) if w > frame.shape[1]*0.5 else w
-                    h = int(h * (1 - 0.5)) if h > frame.shape[0]*0.5 else h
-                    
-      
+            if not boxes:
+                return []
+            
+            box = boxes[0]
+            scaled_box = (box[0] * scale_x, box[1] * scale_y, box[2] * scale_x, box[3] * scale_y)
+            scaled_box = [int(i) for i in scaled_box]
+            x1,y1,x2,y2 = scaled_box
+            x,y,w,h = x1,y1,x2-x1,y2-y1
+            
+            # # Reducing the bounding box size around the center
+            w = int(w * (1 - 0.5)) if w > frame.shape[1]*0.5 else w
+            h = int(h * (0.75)) if h > frame.shape[0]*0.75 else h
             self.p_tracker = cv2.TrackerCSRT_create(self.csrt_params)    
-            self.p_tracker.init(frame, (x,y,w,h)) 
+            self.p_tracker.init(frame, (x,y,x+w,y+h))
+            
+            if self.debug_show:
+                cv2.rectangle(frame, (x,y), (x+w,y+h), (0,255,255), 1)
+                cv2.imshow('CSRT Tracker Create', frame)
+                cv2.waitKey(1) 
+            x,y,w,h=map(int,(x,y,w,h))
             
         self.p_coords = x,y,w,h
         return [{
@@ -241,7 +258,6 @@ class ObjectDetectionTracker:
                 return False
         else:
             self.lost_tracking_count = 0
-        self.overlap_check_count = 0
         return True
 
 class GeneralDetector:
