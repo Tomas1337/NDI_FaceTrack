@@ -67,7 +67,7 @@ class DetectionMananger():
         self.time_since_last_seen = None
         self.last_loc = None
         
-        overlap_check = CONFIG.getint('server', 'overalap_check') if CONFIG.getint('server', 'overlap_check') not in [0,False] else None
+        overlap_check = CONFIG.getint('server', 'overlap_check') if CONFIG.getint('server', 'overlap_check') not in [0,False] else None
         # Detector and Tracker 
         self.tracker = ObjectDetectionTracker(yolo_model_path='models/yolov8n_640.onnx', 
             task='detect', use_csrt=True, overlap_frame_check=overlap_check, debug_show = DEBUG_SHOW and not PRODUCTION,
