@@ -11,6 +11,8 @@ import numpy as np
     
 FRAME_WIDTH = 640
 FRAME_HEIGHT = 360
+PRODUCTION = CONFIG.getboolean('server', 'production')
+DEBUG_SHOW = CONFIG.getboolean('server', 'debug_show')
     
 class DetectionMananger():
     
@@ -30,7 +32,6 @@ class DetectionMananger():
         self.lost_tracking = 0
         self.lost_tracking_count = 0
         self.f_track_count = 0
-
         self.lost_t = 0
 
         #Trackers
@@ -66,11 +67,15 @@ class DetectionMananger():
         self.time_since_last_seen = None
         self.last_loc = None
         
+        overlap_check = CONFIG.getint('server', 'overalap_check') if CONFIG.getint('server', 'overlap_check') not in [0,False] else None
         # Detector and Tracker 
         self.tracker = ObjectDetectionTracker(yolo_model_path='models/yolov8n_640.onnx', 
-            task='detect', use_csrt=True, overlap_frame_check=None, debug_show=True,
+            task='detect', use_csrt=True, overlap_frame_check=overlap_check, debug_show = DEBUG_SHOW and not PRODUCTION,
             device='cpu', track_type=TRACK_TYPE_DICT.get(self.track_type,0))
         
+    def __del__(self):
+        cv2.destroyAllWindows()
+            
     def is_valid_coords(self, coords):
         """
         This function checks whether the coords can be unpacked to x, y, w, h.
@@ -167,9 +172,11 @@ class DetectionMananger():
             self.track_coords = [x, y, w, h]
             face_track_flag = False
         else:
-            self.track_coords = self.tracker.p_coords if self.tracker.p_coords else []
+            #self.track_coords = self.tracker.p_coords if self.tracker.p_coords else []
+            self.track_coords = []
             face_track_flag = False
         
+
         offset_value = int(self.body_y_offset_value * (H/100))
 
         #Normal Tracking
@@ -181,6 +188,9 @@ class DetectionMananger():
             objY = int(y+(y2-y)//2) if face_track_flag else int(y + offset_value)
             self.last_loc = (objX, objY)
             self.lost_tracking = 0
+            cv2.rectangle(frame, (x,y), (x+w,y+h), (0,255,0), 2)
+            cv2.imshow('Tracking Coords & Trajectory', frame)
+            cv2.waitKey(1)
         else:
             objX = self.target_coordinate_x
             objY = self.target_coordinate_y
@@ -383,10 +393,10 @@ def tracker_main(Tracker, frame, custom_parameters = {}):
                 
         # The x,y,w,h are scaled from the original to 640x640
         # We need to scale it back to the original frame size
-        output["x"] = int(output["x"] * (FRAME_WIDTH/640))
-        output["y"] = int(output["y"] * (FRAME_HEIGHT/640))
-        output["w"] = int(output["w"] * (FRAME_WIDTH/640))
-        output["h"] = int(output["h"] * (FRAME_HEIGHT/640))    
+        # output["x"] = int(output["x"] * (FRAME_WIDTH/640))
+        # output["y"] = int(output["y"] * (FRAME_HEIGHT/640))
+        # output["w"] = int(output["w"] * (FRAME_WIDTH/640))
+        # output["h"] = int(output["h"] * (FRAME_HEIGHT/640))    
         
     else:
         #print("Cannot unpack track_coords")

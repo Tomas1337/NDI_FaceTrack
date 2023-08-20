@@ -110,14 +110,15 @@ class ONNX_YOLOv8:
 
         return result_items
 
-
-
     def predict(self, original_image):
+        original_image_shape = original_image.shape[:2]
+        
         preprocessed_image, scaling_factor_x, scaling_factor_y = self.preprocess(original_image)
         outputs = self.ort_session.run(self.output_names, {self.input_names[0]: preprocessed_image})[0]
         result_items = self.postprocess(outputs, scaling_factor_x, scaling_factor_y)
-        return result_items
+        # Convert the results back to the original frame size because the process made its 640x640
 
+        return result_items
 
 def test_onnxruntime_match():
     # Example usage

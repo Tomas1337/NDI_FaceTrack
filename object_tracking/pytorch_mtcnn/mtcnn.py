@@ -2,9 +2,7 @@ import torch
 from torch import nn
 import numpy as np
 import os
-
 from .utils import detect_face, extract_face
-
 
 class PNet(nn.Module):
     """MTCNN PNet.
@@ -47,7 +45,6 @@ class PNet(nn.Module):
         a = self.softmax4_1(a)
         b = self.conv4_2(x)
         return b, a
-
 
 class RNet(nn.Module):
     """MTCNN RNet.
@@ -96,7 +93,6 @@ class RNet(nn.Module):
         a = self.softmax5_1(a)
         b = self.dense5_2(x)
         return b, a
-
 
 class ONet(nn.Module):
     """MTCNN ONet.
@@ -154,7 +150,6 @@ class ONet(nn.Module):
         c = self.dense6_3(x)
         return b, c, a
 
-
 class MTCNN(nn.Module):
     """MTCNN face detection module.
 
@@ -186,12 +181,10 @@ class MTCNN(nn.Module):
         device {torch.device} -- The device on which to run neural net passes. Image tensors and
             models are copied to this device before running forward passes. (default: {None})
     """
-
     def __init__(
         self, image_size=160, margin=0, min_face_size=20,
         thresholds=[0.6, 0.7, 0.7], factor=0.709, post_process=True,
-        select_largest=True, keep_all=False, device=None
-    ):
+        select_largest=True, keep_all=False, device=None):
         super().__init__()
 
         self.image_size = image_size
@@ -395,3 +388,30 @@ def prewhiten(x):
     std_adj = std.clamp(min=1.0/(float(x.numel())**0.5))
     y = (x - mean) / std_adj
     return y
+
+def test_mtcnn_face_detection():
+    import cv2
+    import time
+    
+    img_path = 'C:/Users/tomas/Pictures/131930298_728327044754880_2272474766692576674_n.jpg'
+    img = cv2.imread(img_path)
+    mtcnn = MTCNN(margin = 14, factor = 0.709, keep_all= True,post_process=True, select_largest=False,device= 'cpu')
+    start_time = time.time()
+    boxes, results = mtcnn.detect(img)
+    
+    # Filter boxes by confidence and size
+    filtered_boxes = []
+    scores = []
+    for box, res in zip(boxes, results):
+        filtered_boxes.append(box)
+        scores.append(res)
+    
+    # On the same folder, save a jpg named 'mtcnn_test.jpg' with all the faces detected via a drawn bounding box
+    for i, box in enumerate(boxes):
+        box = [int(b) for b in box]
+        cv2.rectangle(img, (box[0], box[1]), (box[2], box[3]), (0,255,0), 2)
+    cv2.imwrite('mtcnn_test.jpg', img)
+    print(f"Time taken: {round(time.time() - start_time,2)} seconds")
+
+if __name__ == "__main__":
+    test_mtcnn_face_detection()

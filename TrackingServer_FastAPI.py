@@ -132,7 +132,7 @@ def start_tracking_pipe(pipe_handle):
     
                 #Pass to Track Module and get 
                 output = tracker_main(Tracker, frame)
-         
+
                 #Unpack and Pickle response
                 x,y,w,h,x_Velocity,y_Velocity = output['x'], output['y'], output['w'], output['h'], output['x_velocity'], output['y_velocity']
                 payload = PipeServerPayload(x=x,y=y,w=w,h=h,x_velocity=x_Velocity,y_velocity=y_Velocity)       

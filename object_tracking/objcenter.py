@@ -5,63 +5,42 @@ from tool.utils import overlap_check
 from .onnx_yolov8 import BoxResult, Result
 from config import TRACK_TYPE_DICT
 CURR_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__),".."))
-
 from config import CONFIG
 
 class FastMTCNN(object):
-    
     """Fast MTCNN implementation."""
-    
     def __init__(self):
         from .pytorch_mtcnn.mtcnn import MTCNN
-        self.resize = 1
-        self.mtcnn = MTCNN(margin = 14, factor = 0.709, keep_all= True,post_process=True, select_largest=False,device= 'cpu')
-    
+        self.resize = 0.5
+        self.mtcnn = MTCNN(margin=14, factor=0.709, keep_all=False, post_process=True, select_largest=False, device='cpu')
+
     def update(self, frame, minConf=0.9, iou_threshold=0.45, nms_threshold=0.5):
-        print('Running a scoped MTCNN')
+        # print('Running a scoped MTCNN')
         width_minimum = 30
         height_minimum = 40
-        if self.resize != 1:
-            frame = cv2.resize(frame, (int(frame.shape[1] * self.resize), int(frame.shape[0] * self.resize)))
+        original_shape = frame.shape
+        resize_ratio = self.resize if self.resize != 1 else 1
+        resized_frame = frame
+        if resize_ratio != 1:
+            resized_frame = cv2.resize(frame, (int(frame.shape[1] * resize_ratio), int(frame.shape[0] * resize_ratio)))
 
-        boxes, results = self.mtcnn.detect(frame, landmarks=False)
+        boxes, results = self.mtcnn.detect(resized_frame, landmarks=False)
         if boxes is None or len(boxes) == 0:
             return []
 
-        # Resize the bounding boxes
-        boxes = (boxes * (1 / self.resize)).astype(int)
+        # Resize the bounding boxes to match the resized frame
+        boxes = (boxes / resize_ratio).astype(int)
 
         # Filter boxes by confidence and size
-        filtered_boxes = []
-        scores = []
-        for box, res in zip(boxes, results):
-            if res >= minConf and (box[2] - box[0]) >= width_minimum and (box[3] - box[1]) >= height_minimum:
-                filtered_boxes.append(box)
-                scores.append(res)
-
-        # Apply Non-Maximum Suppression (NMS) to filter the results
-        result_boxes = cv2.dnn.NMSBoxes(filtered_boxes, scores, minConf, iou_threshold, nms_threshold)
-        result_items = []
-
-        for i in range(len(result_boxes)):
-            index = result_boxes[i]
-            box = filtered_boxes[index]
-            xyxy = np.array([
-                box[0],
-                box[1],
-                box[2],
-                box[3]
-            ])
-            boxes_obj = BoxResult(
-                xyxy=xyxy[np.newaxis, :],
-                cls=np.array([0]).astype(int),  # Assuming class ID 0 for faces
-                conf=np.array([scores[index]])
-            )
-            result_item = Result(boxes=boxes_obj)
-            result_items.append(result_item)
+        filtered_boxes = [box for box, res in zip(boxes, results)
+                        if res >= minConf and (box[2] - box[0]) >= width_minimum and (box[3] - box[1]) >= height_minimum]
+        
+        result_items = [Result(boxes=BoxResult(xyxy=np.array([box[0], box[1], box[2], box[3]])[np.newaxis, :],
+                                            cls=np.array([0]).astype(int),  # Assuming class ID 0 for faces
+                                            conf=np.array([res])))
+                        for box, res in zip(boxes, results) if res >= minConf]
 
         return result_items
-
 
     def get_all_locations(self, frame, minConf = 0.6):
         start_time = time.time()
@@ -95,6 +74,7 @@ class ObjectDetectionTracker:
         self.debug_show = debug_show
         self.bounding_box_edge_padding = 100
         self.p_coords = None
+        self.no_detection_count = 0
         
         if self.use_csrt:
             params = cv2.TrackerCSRT_Params()
@@ -122,33 +102,37 @@ class ObjectDetectionTracker:
     def track_with_csrt(self, source=None, imgsz=640, **kwargs):
         self.track_type = kwargs.get('track_type', self.track_type)
         self.general_detector.track_type = TRACK_TYPE_DICT.get(self.track_type, 'face')
-        original_h, original_w = source.shape[:2]  # Save the original frame size
-        scale_x = 1#original_w / imgsz
-        scale_y = 1#original_h / imgsz
-        frame = cv2.resize(source, (imgsz, imgsz))
+        frame = source
 
         if self.p_tracker:
             ok, position = self.p_tracker.update(frame)
             if ok:
                 # x, y, x2, y2 = map(int, position)
-                # w = x2 - x
-                # h = y2 - y
-                x, y, w, h = map(int, position)                    
+                # w = int(x2 - x)
+                # h = int(y2 - y)
+
+                x, y, w, h = map(int, position)
                 x,y,w,h = [0 if i < 0 else int(i) for i in [x,y,w,h]]
                 self.p_track_count = 0
                 
                 if self.debug_show:
-                    cv2.rectangle(frame, (x,y), (x+w,y+h), (255,0,255), 1)
-                    cv2.imshow('P Tracker', frame)
+                    f_copy = frame.copy()
+                    cv2.rectangle(f_copy, (x,y), (x+w,y+h), (255,0,255), 1)
+                    cv2.imshow('CSRT Tracking', f_copy)
                     cv2.waitKey(1)
                 
                 w = int(w * (1 - 0.5)) if w > frame.shape[1]*0.5 else w
                 h = int(h * (0.75)) if h > frame.shape[0]*0.75 else h
-                ## Overlap check, if needed
+                # Overlap check, if needed
                 self.overlap_check_count += 1
                 if self.overlap_frames is not None and self.overlap_check_count >= self.overlap_frames:
-                    if not self.check_overlap(frame, **kwargs):
-                        self.p_tracker=None
+                    overlap_result = self.check_overlap(frame, **kwargs)
+                    if overlap_result == None:
+                        pass
+                    elif overlap_result == False:
+                        self.p_tracker = None
+                    elif overlap_result == True:
+                        self.overlap_check_count = 0
                     
             else:
                 self.lost_tracking_count += 1
@@ -182,10 +166,7 @@ class ObjectDetectionTracker:
             if not boxes:
                 return []
             
-            box = boxes[0]
-            scaled_box = (box[0] * scale_x, box[1] * scale_y, box[2] * scale_x, box[3] * scale_y)
-            scaled_box = [int(i) for i in scaled_box]
-            x1,y1,x2,y2 = scaled_box
+            x1,y1,x2,y2 = [int(i) for i in boxes[0]]
             x,y,w,h = x1,y1,x2-x1,y2-y1
             
             # # Reducing the bounding box size around the center
@@ -197,7 +178,8 @@ class ObjectDetectionTracker:
             if self.debug_show:
                 cv2.rectangle(frame, (x,y), (x+w,y+h), (0,255,255), 1)
                 cv2.imshow('CSRT Tracker Create', frame)
-                cv2.waitKey(1) 
+                cv2.waitKey(1)
+                
             x,y,w,h=map(int,(x,y,w,h))
             
         self.p_coords = x,y,w,h
@@ -209,12 +191,23 @@ class ObjectDetectionTracker:
     def reset_tracker(self):
         self.p_tracker = None
         
+    def increment_lost_tracking(self):
+        self.lost_tracking_count += 1
+        print(f"Overlap is None. Lost tracking count is {self.lost_tracking_count}")
+        if self.lost_tracking_count >= 7:
+            print("Overlap is None. Resetting tracker")
+            self.p_tracker = None
+            self.lost_tracking_count = 0
+            self.overlap_check_count = 0
+            return False
+        return True
+            
     def check_overlap(self, frame, **kwargs):
         results = self.general_detector.detect(frame, verbose=False, minConf=0.4, **kwargs)
         
         # No detections on current frame
         if not results:
-            return None
+            return self.increment_lost_tracking()
 
         boxes = None
         for result in results:
@@ -248,15 +241,9 @@ class ObjectDetectionTracker:
             
         overlap = overlap_check(self.p_coords, detected_box)
         if overlap < 0.10:
-            self.lost_tracking_count += 1
-            print(f"Overlap is {overlap}. Lost tracking count is {self.lost_tracking_count}")
-            if self.lost_tracking_count >= 10:
-                print(f"Overlap is {overlap}. Resetting tracker")
-                self.p_tracker = None
-                self.lost_tracking_count = 0
-                self.overlap_check_count = 0
-                return False
+            return self.increment_lost_tracking()
         else:
+            print(f"Overlap SUCCESS: {round(overlap*100,2)}%. Resetting lost tracking count")
             self.lost_tracking_count = 0
         return True
 
@@ -270,7 +257,7 @@ class GeneralDetector:
         self.face_detector = FastMTCNN()
         self.track_type = track_type
 
-    def detect(self, frame, minConf=0.9, **kwargs):
+    def detect(self, frame, minConf=0.6, **kwargs):
         if self.track_type == 'face':
             return self.face_detector.update(frame, minConf=0.2)
         elif self.track_type == 'body':

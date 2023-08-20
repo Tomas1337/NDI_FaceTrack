@@ -12,9 +12,10 @@ from tool.pipeclient import PipeClient
 from tool.payloads import *
 from tool.utils import str2bool
 from tool.pyqtkeybind import keybinder
-import debugpy
-debugpy.listen(("localhost", 5678))
-debugpy.wait_for_client()
+if not CONFIG.getboolean('server', 'production'):
+    import debugpy
+    debugpy.listen(("localhost", 5678))
+    debugpy.wait_for_client()
 
 class WinEventFilter(QAbstractNativeEventFilter):
     def __init__(self, keybinder):
@@ -24,14 +25,6 @@ class WinEventFilter(QAbstractNativeEventFilter):
     def nativeEventFilter(self,eventType, message):
         ret = self.keybinder.handler(eventType, message)
         return ret, 0
-
-# #Setup Logging
-# def handle_exception(exc_type, exc_value, exc_traceback):
-#     if issubclass(exc_type, KeyboardInterrupt):
-#         sys.__excepthook__(exc_type, exc_value, exc_traceback)
-#         return
-#     logger.error("Uncaught exception", exc_info=(exc_type, exc_value, exc_traceback))
-# sys.excepthook = handle_exception
 
 class MainWindow(QMainWindow):
     signalStatus = Signal(str)
@@ -653,7 +646,7 @@ class DetectionWidget(QObject):
         self.center_coords = (FRAME_WIDTH//2, FRAME_HEIGHT//2)
         self.reset_trigger = False
         self.track_type = 0
-        debugpy.breakpoint()
+        #debugpy.breakpoint()
 
     @Slot(np.ndarray)
     def server_transact(self, frame):
