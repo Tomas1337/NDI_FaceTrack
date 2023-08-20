@@ -844,9 +844,10 @@ def main(args = None):
         # exit()
         # @TODO: Start the server in the background
         # print('Trying to start own Server')
-        # from TrackingServer_FastAPI import main as app_main
-        # fastapi_process = Process(target = app_main)
-        # fastapi_process.start()
+        from TrackingServer_FastAPI import main as app_main
+        from multiprocessing import Process
+        fastapi_process = Process(target = app_main)
+        fastapi_process.start()
         pass
 
             

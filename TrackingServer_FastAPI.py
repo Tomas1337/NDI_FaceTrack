@@ -16,7 +16,7 @@ import os
 BUFFERSIZE = 921654
 IMAGE_WIDTH = 640
 IMAGE_HEIGHT = 360
-
+PRODUCTION = CONFIG.getboolean('server', 'production')
 app = FastAPI()
 app.include_router(websockets.router)
 
@@ -230,7 +230,6 @@ def check_tracking_server():
         return response
 
 def main():
-    is_production = os.environ.get("PRODUCTION", False)
     uvicorn.run(app="TrackingServer_FastAPI:app", 
         host=CONFIG.get('server','host'), 
         port=CONFIG.getint('server','port'), 
