@@ -2,7 +2,7 @@ import torch
 from torch import nn
 import numpy as np
 import os
-from .utils import detect_face, extract_face
+from utils import detect_face, extract_face
 
 class PNet(nn.Module):
     """MTCNN PNet.
@@ -239,6 +239,8 @@ class MTCNN(nn.Module):
         # Detect faces
         with torch.no_grad():
             batch_boxes, batch_probs = self.detect(img)
+        # # Convert batch_boxes and batch_probs to Torch Tensors
+        return batch_boxes, batch_probs
 
         # Determine if a batch or single image was passed
         batch_mode = True
@@ -374,6 +376,9 @@ class MTCNN(nn.Module):
 
         if landmarks:
             return boxes, probs, points
+        
+        boxes = torch.as_tensor(boxes)
+        probs = torch.as_tensor(probs)
 
         return boxes, probs
 
@@ -395,9 +400,11 @@ def test_mtcnn_face_detection():
     
     img_path = 'C:/Users/tomas/Pictures/131930298_728327044754880_2272474766692576674_n.jpg'
     img = cv2.imread(img_path)
+    img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    img_tensor = np.transpose(img_rgb, (2, 0, 1)).astype(np.float32)
     mtcnn = MTCNN(margin = 14, factor = 0.709, keep_all= True,post_process=True, select_largest=False,device= 'cpu')
     start_time = time.time()
-    boxes, results = mtcnn.detect(img)
+    boxes, results = mtcnn.detect(img_tensor)
     
     # Filter boxes by confidence and size
     filtered_boxes = []
@@ -413,5 +420,106 @@ def test_mtcnn_face_detection():
     cv2.imwrite('mtcnn_test.jpg', img)
     print(f"Time taken: {round(time.time() - start_time,2)} seconds")
 
+def convert_to_onnx_tracing():
+    import cv2
+    print(f"Converting model to ONNX")
+    
+    # Load the same image as in the test function
+    img_path = 'C:/Users/tomas/Pictures/131930298_728327044754880_2272474766692576674_n.jpg'
+    img = cv2.imread(img_path)
+    # Comvert to tensor
+    #img = torch.tensor(img.transpose((2, 0, 1)), dtype=torch.float32).unsqueeze(0)
+    # Create the MTCNN model
+    mtcnn = MTCNN(margin=14, factor=0.709, keep_all=False, post_process=True, select_largest=False, device='cpu')
+    mtcnn.eval()
+    
+    # Debugging: Print the shape and some statistics about the image
+    print(f"Image shape: {img.shape}")
+    print(f"Image min: {img.min()}, max: {img.max()}")
+    
+    # Check if the model can detect any faces in the image
+    boxes, _ = mtcnn.detect(img)
+    if boxes is None or all(box is None for box in boxes):
+        print("No faces detected in the image. Cannot proceed with ONNX conversion.")
+        return
+    
+    # Debugging: Print the detected boxes
+    print(f"Detected boxes: {boxes}")
+    
+    # Export the model to ONNX using the loaded image as input
+    img_tensor = torch.tensor(img)
+    torch.onnx.export(mtcnn, img_tensor, "mtcnn.onnx")
+    
+    print(f"Model converted to ONNX")
+    
+def convert_to_onnx_scripting():
+    import cv2
+    import torch.jit
+
+    print(f"Converting model to ONNX")
+
+    # Load the same image as in the test function
+    img_path = 'C:/Users/tomas/Pictures/131930298_728327044754880_2272474766692576674_n.jpg'
+    img = cv2.imread(img_path)
+    
+    # Create the MTCNN model
+    mtcnn = MTCNN()
+    #mtcnn = MTCNN(margin=14, factor=0.709, keep_all=False, post_process=True, select_largest=False, device='cpu')
+    mtcnn.eval()
+
+    # Script the model
+    scripted_model = torch.jit.script(mtcnn)
+
+    # Export the scripted model to ONNX
+    img_rgb = np.transpose(img, (2, 0, 1))
+    img_tensor = torch.tensor(img_rgb, dtype=torch.float32)
+    torch.onnx.export(scripted_model, img_tensor, "mtcnn.onnx", verbose=True, opset_version=11)
+
+    print(f"Model converted to ONNX")
+
+def test_onnx_mtcnn_face_detection():
+    import cv2, time, onnxruntime
+    img_path = 'C:/Users/tomas/Pictures/131930298_728327044754880_2272474766692576674_n.jpg'
+    onnx_path = 'C:/Projects/NDI_FaceTrack/mtcnn.onnx'
+    
+    img = cv2.imread(img_path)
+    img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    img_tensor = np.transpose(img_rgb, (2, 0, 1)).astype(np.float32)
+    #img_tensor = np.expand_dims(img_tensor, axis=0)
+
+    # Load ONNX model
+    session = onnxruntime.InferenceSession(onnx_path)
+    input_name = session.get_inputs()[0].name
+    output_names = [o.name for o in session.get_outputs()]
+
+    # Run inference
+    start_time = time.time()
+    results = session.run(output_names, {input_name: img_tensor})
+    boxes = results[0]  # Assuming the boxes are the first output; adjust as needed
+
+    # Transpose the array to have shape (160, 160, 3)
+    image_array = np.transpose(results[0], (1, 2, 0))
+
+    # De-normalize the array (multiply by 255 and convert to integers)
+    image_array = (image_array * 255).astype(np.uint8)
+
+    # Convert the color channel order from RGB to BGR (for OpenCV)
+    image_array = cv2.cvtColor(image_array, cv2.COLOR_RGB2BGR)
+
+    # Display the image using OpenCV
+    cv2.imshow('Face', image_array)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
+
+    # Draw bounding boxes and save the image
+    for box in boxes:
+        box = [int(b) for b in box]
+        cv2.rectangle(img, (box[0], box[1]), (box[2], box[3]), (0, 255, 0), 2)
+    cv2.imwrite('mtcnn_test_onnx.jpg', img)
+    print(f"Time taken: {round(time.time() - start_time, 2)} seconds")
+
 if __name__ == "__main__":
-    test_mtcnn_face_detection()
+    #test_mtcnn_face_detection() # Uses detect
+    #convert_to_onnx_tracing()
+    convert_to_onnx_scripting() # Uses forward
+    test_onnx_mtcnn_face_detection()

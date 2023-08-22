@@ -75,6 +75,15 @@
             "program": "face_tracking/onnx_yolov8.py",
             "console": "integratedTerminal",
             "python": "C:/Projects/NDI_FaceTrack/.venv0703torchGPU/Scripts/python.exe",
+        },
+        {   
+            "name": "Current File",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "python": "${command:python.interpreterPath}"
+
         }
     ]
 }

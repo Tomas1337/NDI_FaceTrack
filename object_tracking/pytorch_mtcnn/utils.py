@@ -1,28 +1,21 @@
 import torch
 from torch.nn.functional import interpolate
 from torchvision.transforms import functional as F
+from torchvision.transforms import Resize
 from torchvision.ops.boxes import batched_nms
 import cv2
 from PIL import Image
 import numpy as np
 import os
+from typing import Union, Tuple
 
 def detect_face(imgs, minsize, pnet, rnet, onet, threshold, factor, device):
-    if isinstance(imgs, (np.ndarray, torch.Tensor)):
-        imgs = torch.as_tensor(imgs, device=device)
-        if len(imgs.shape) == 3:
-            imgs = imgs.unsqueeze(0)
-    else:
-        if not isinstance(imgs, (list, tuple)):
-            imgs = [imgs]
-        if any(img.size != imgs[0].size for img in imgs):
-            raise Exception("MTCNN batch processing only compatible with equal-dimension images.")
-        imgs = np.stack([np.uint8(img) for img in imgs])
+    # if isinstance(imgs, (np.ndarray, torch.Tensor)):
+    #     imgs = torch.as_tensor(imgs, device=device)
+    #     # if len(imgs.shape) == 3:
+    #     imgs = imgs.unsqueeze(0)
 
-    imgs = torch.as_tensor(imgs, device=device)
-
-    imgs = imgs.permute(0, 3, 1, 2).float()
-
+    imgs = torch.as_tensor(imgs, device='cpu').unsqueeze(0)
     batch_size = len(imgs)
     h, w = imgs.shape[2:4]
     m = 12.0 / minsize
@@ -52,6 +45,7 @@ def detect_face(imgs, minsize, pnet, rnet, onet, threshold, factor, device):
         image_inds.append(image_inds_scale)
         all_inds.append(all_i + image_inds_scale)
         all_i += batch_size
+    print(f"PNET boxes: {boxes}")
 
     boxes = torch.cat(boxes, dim=0)
     image_inds = torch.cat(image_inds, dim=0).cpu()
@@ -239,9 +233,8 @@ def batched_nms_numpy(boxes, scores, idxs, threshold, method):
     keep = nms_numpy(boxes_for_nms, scores, threshold, method)
     return torch.as_tensor(keep, dtype=torch.long, device=device)
 
-
 def pad(boxes, w, h):
-    boxes = boxes.trunc().int().cpu().numpy()
+    boxes = boxes.trunc().int()
     x = boxes[:, 0]
     y = boxes[:, 1]
     ex = boxes[:, 2]
@@ -253,7 +246,6 @@ def pad(boxes, w, h):
     ey[ey > h] = h
 
     return y, ey, x, ex
-
 
 def rerec(bboxA):
     h = bboxA[:, 3] - bboxA[:, 1]
@@ -267,33 +259,30 @@ def rerec(bboxA):
     return bboxA
 
 
-def imresample(img, sz):
-    im_data = interpolate(img, size=sz, mode="area")
+def imresample(img: torch.Tensor, sz: Union[torch.Tensor, Tuple[int, int]]) -> torch.Tensor:
+    sz_tensor = torch.tensor(sz, device=img.device) if isinstance(sz, tuple) else sz
+    # Turn intoa list
+    sz_tensor = sz_tensor.tolist() if isinstance(sz_tensor, torch.Tensor) else sz_tensor
+    im_data = interpolate(img, size=sz_tensor, mode="area")
     return im_data
 
 
-def crop_resize(img, box, image_size):
-    if isinstance(img, np.ndarray):
-        out = cv2.resize(
-            img[box[1]:box[3], box[0]:box[2]],
-            (image_size, image_size),
-            interpolation=cv2.INTER_AREA
-        ).copy()
-    else:
-        out = img.crop(box).copy().resize((image_size, image_size), Image.BILINEAR)
-    return out
+def crop_resize(img_tensor, box, image_size):
+    cropped_img = img_tensor[:, box[1]:box[3], box[0]:box[2]]
+    resized_img = interpolate(cropped_img.unsqueeze(0), size=(image_size, image_size), mode="bilinear").squeeze(0)
+    return resized_img
 
+def save_img(img_tensor, path):
+    from torchvision.transforms.functional import to_pil_image
 
-def save_img(img, path):
-    if isinstance(img, np.ndarray):
-        cv2.imwrite(path, cv2.cvtColor(img, cv2.COLOR_RGB2BGR))
-    else:
-        img.save(path)
-
+    img_pil = to_pil_image(img_tensor)  # Convert tensor to PIL Image
+    img_pil.save(path)
 
 def get_size(img):
     if isinstance(img, np.ndarray):
         return img.shape[1::-1]
+    elif isinstance(img, torch.Tensor):
+        return img.shape[-2:][::-1]
     else:
         return img.size
 
@@ -318,7 +307,7 @@ def extract_face(img, box, image_size=160, margin=0, save_path=None):
         margin * (box[2] - box[0]) / (image_size - margin),
         margin * (box[3] - box[1]) / (image_size - margin),
     ]
-    raw_image_size = get_size(img)
+    raw_image_size = img.shape[-2:][::-1]
     box = [
         int(max(box[0] - margin[0] / 2, 0)),
         int(max(box[1] - margin[1] / 2, 0)),
@@ -330,8 +319,6 @@ def extract_face(img, box, image_size=160, margin=0, save_path=None):
 
     if save_path is not None:
         os.makedirs(os.path.dirname(save_path) + "/", exist_ok=True)
-        save_img(face, save_path)
-
-    face = F.to_tensor(np.float32(face))
+        save_img(face, save_path)  # Note: save_img should be refactored to handle tensors if needed
 
     return face

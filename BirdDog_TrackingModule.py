@@ -390,14 +390,7 @@ def tracker_main(Tracker, frame, custom_parameters = {}):
         output["y"] = track_coords[1]
         output["w"] = track_coords[2]
         output["h"] = track_coords[3]
-                
-        # The x,y,w,h are scaled from the original to 640x640
-        # We need to scale it back to the original frame size
-        # output["x"] = int(output["x"] * (FRAME_WIDTH/640))
-        # output["y"] = int(output["y"] * (FRAME_HEIGHT/640))
-        # output["w"] = int(output["w"] * (FRAME_WIDTH/640))
-        # output["h"] = int(output["h"] * (FRAME_HEIGHT/640))    
-        
+
     else:
         #print("Cannot unpack track_coords")
         output["x"] = None
