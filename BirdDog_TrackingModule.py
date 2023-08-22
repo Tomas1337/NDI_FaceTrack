@@ -1,14 +1,20 @@
-from face_tracking.camera_control import *
-from face_tracking.objcenter import *
+from object_tracking.camera_control import *
+from object_tracking.objcenter import *
 from tool.custom_widgets import *
-from config import CONFIG
+from config import CONFIG, TRACK_TYPE_DICT
 import time, cv2
 from tool.info_logging import add_logger
 from decimal import Decimal
 from collections import deque
 import numpy as np
 
-class DetectionWidget():
+    
+FRAME_WIDTH = 640
+FRAME_HEIGHT = 360
+PRODUCTION = CONFIG.getboolean('server', 'production')
+DEBUG_SHOW = CONFIG.getboolean('server', 'debug_show')
+    
+class DetectionMananger():
     
     def __init__(self):
         FRAME_WIDTH = 640
@@ -26,7 +32,6 @@ class DetectionWidget():
         self.lost_tracking = 0
         self.lost_tracking_count = 0
         self.f_track_count = 0
-        self.overlap_counter = 0
         self.lost_t = 0
 
         #Trackers
@@ -62,10 +67,15 @@ class DetectionWidget():
         self.time_since_last_seen = None
         self.last_loc = None
         
+        overlap_check = CONFIG.getint('server', 'overlap_check') if CONFIG.getint('server', 'overlap_check') not in [0,False] else None
         # Detector and Tracker 
         self.tracker = ObjectDetectionTracker(yolo_model_path='models/yolov8n_640.onnx', 
-            task='detect', use_csrt=True, overlap_frames=None, device='cpu')
+            task='detect', use_csrt=True, overlap_frame_check=overlap_check, debug_show = DEBUG_SHOW and not PRODUCTION,
+            device='cpu', track_type=TRACK_TYPE_DICT.get(self.track_type,0))
         
+    def __del__(self):
+        cv2.destroyAllWindows()
+            
     def is_valid_coords(self, coords):
         """
         This function checks whether the coords can be unpacked to x, y, w, h.
@@ -75,7 +85,7 @@ class DetectionWidget():
     def calculate_camera_control(self, objX, objY, centerX, centerY, W, H):
         x_controller = PTZ_Controller_Novel(self.focal_length, self.gamma)
         x_speed = x_controller.omega_tur_plus1(objX, centerX, RMin=0.1)
-        y_controller = PTZ_Controller_Novel(self.focal_length, self.gamma)
+        y_controller = PTZ_Controller_Novel(self.focal_length, round(self.gamma*0.5,2))
         y_speed = y_controller.omega_tur_plus1(objY, centerY, RMin=0.1, RMax=7.5)
         x_speed = float(Decimal(self._pos_error_thresholding(W, x_speed, centerX, objX, self.xMinE)).quantize(Decimal("0.0001")))
         y_speed = float(Decimal(self._pos_error_thresholding(H, y_speed, centerY, objY, self.yMinE)).quantize(Decimal("0.0001")))
@@ -138,7 +148,7 @@ class DetectionWidget():
         centerX = self.target_coordinate_x
         centerY = self.target_coordinate_y
     
-        results =  self.tracker.track_with_csrt(frame, device='cpu', imgsz=640)
+        results =  self.tracker.track_with_csrt(frame, device='cpu', imgsz=640, track_type=self.track_type)
         #print(f"Time taken for detection and tracking: {time.time() - s1_time}")
         
         face_coords = None
@@ -148,30 +158,39 @@ class DetectionWidget():
             box = result["box"]
             body_coords = box
             face_coords = box
-        if len(results) == 0:
+            
+        if not results:
             face_coords=None
-        
+            #return (0.0, 0.0)
+            
         if self.is_valid_coords(face_coords):
             x, y, w, h = face_coords
-            self.track_coords = [x, y, x + w, y + h]
+            self.track_coords = [x, y, w, h]
             face_track_flag = True
         elif self.is_valid_coords(body_coords):
             x, y, w, h = body_coords
-            self.track_coords = [x, y, x + w, y + h]
-            self.overlap_counter = 0
+            self.track_coords = [x, y, w, h]
             face_track_flag = False
         else:
+            #self.track_coords = self.tracker.p_coords if self.tracker.p_coords else []
+            self.track_coords = []
             face_track_flag = False
         
+
         offset_value = int(self.body_y_offset_value * (H/100))
 
         #Normal Tracking
         if len(self.track_coords) > 0:
-            [x,y,x2,y2] = self.track_coords
+            [x,y,w,h] = self.track_coords
+            x2 = x+w
+            y2 = y+h
             objX = int(x+(x2-x)//2)
             objY = int(y+(y2-y)//2) if face_track_flag else int(y + offset_value)
             self.last_loc = (objX, objY)
             self.lost_tracking = 0
+            cv2.rectangle(frame, (x,y), (x+w,y+h), (0,255,0), 2)
+            cv2.imshow('Tracking Coords & Trajectory', frame)
+            cv2.waitKey(1)
         else:
             objX = self.target_coordinate_x
             objY = self.target_coordinate_y
@@ -194,7 +213,18 @@ class DetectionWidget():
 
         return (x_speed, y_speed)
 
-    def get_bounding_boxes(self):
+    def get_bounding_coords(self, format='xywh'):
+        if format == 'xyxy':
+            if len(self.track_coords) == 4:
+                x,y,w,h = self.track_coords
+                x2 = x+w
+                y2 = y+h
+                return [x,y,x2,y2]
+        # Track coord
+        else:
+            # Already should be x1, x2, y1, y2
+            pass
+
         return self.track_coords
 
     def set_tracker_parameters(self, custom_parameters):
@@ -294,7 +324,7 @@ def tracker_main(Tracker, frame, custom_parameters = {}):
     """
     Inputs come from the UI:
         Tracker: Object
-            - An initated DetectionWidget
+            - An initated Detection Manager
         frame: Numpy array
             -3 Channel with dimensions of (H, W, C); 
 
@@ -348,7 +378,7 @@ def tracker_main(Tracker, frame, custom_parameters = {}):
     Tracker.set_tracker_parameters(custom_parameters)
     x_velocity, y_velocity = Tracker.main_track(frame, skip_frames=None)
     #print(f"Tracker has returned with x_velocity: {x_velocity}, y_velocity: {y_velocity}")
-    track_coords = Tracker.get_bounding_boxes()
+    track_coords = Tracker.get_bounding_coords()
     
     output = {
     "x_velocity": x_velocity, 
@@ -360,6 +390,14 @@ def tracker_main(Tracker, frame, custom_parameters = {}):
         output["y"] = track_coords[1]
         output["w"] = track_coords[2]
         output["h"] = track_coords[3]
+                
+        # The x,y,w,h are scaled from the original to 640x640
+        # We need to scale it back to the original frame size
+        # output["x"] = int(output["x"] * (FRAME_WIDTH/640))
+        # output["y"] = int(output["y"] * (FRAME_HEIGHT/640))
+        # output["w"] = int(output["w"] * (FRAME_WIDTH/640))
+        # output["h"] = int(output["h"] * (FRAME_HEIGHT/640))    
+        
     else:
         #print("Cannot unpack track_coords")
         output["x"] = None
@@ -368,16 +406,15 @@ def tracker_main(Tracker, frame, custom_parameters = {}):
         output["h"] = None
     
     #print(f"Output XY: {output['x_velocity']}, {output['y_velocity']}")
+    
+
+
     return output
 
 logger = add_logger()
 
 if __name__ == '__main__':
-    
-    FRAME_WIDTH = 640
-    FRAME_HEIGHT = 360
-
-    Tracker = DetectionWidget()
+    Tracker = DetectionMananger()
     print('Starting new tracker?')
     args = {}
     tracker_main(*args)

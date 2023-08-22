@@ -7,7 +7,9 @@ excluded_modules = ['torch.distributions']
 server = Analysis(['pyinstaller_server.py'],
              pathex=['C:\\Projects\\NDI_FaceTrack'],
              binaries=[('Processing.NDI.Lib.x64.dll', '.')],
-             datas=[('models', 'models'),('styling','styling'),('config.ini','.'),('config.py','.')],
+             datas=[('models/yolov8n_640.onnx', 'models'), ('models/onet.pt','models'),
+               ('models/pnet.pt','models'), ('models/rnet.pt','models'),
+               ('styling','styling'),('config.ini','.'),('config.py','.')],
              hiddenimports=['cv2', 'keyboard',
                 'uvicorn.lifespan.off','uvicorn.lifespan.on','uvicorn.lifespan',
                 'uvicorn.protocols.websockets.auto','uvicorn.protocols.websockets.wsproto_impl',
@@ -54,14 +56,14 @@ server_exe = EXE(server_pyz,
           upx=True,
           console=True)
 
-server_coll = COLLECT(server_exe,
-               server.binaries,
-               server.zipfiles,
-               server.datas,
-               strip=False,
-               upx=True,
-               upx_exclude=[],
-               name='Tracking Server')
+# server_coll = COLLECT(server_exe,
+#                server.binaries,
+#                server.zipfiles,
+#                server.datas,
+#                strip=False,
+#                upx=True,
+#                upx_exclude=[],
+#                name='Tracking Server')
 
 ### GUI Pyinstaller ###
 gui_pyz = PYZ(gui.pure, gui.zipped_data,
@@ -78,11 +80,25 @@ gui_exe = EXE(gui_pyz,
           upx=True,
           console=True)
 
-gui_coll = COLLECT(gui_exe,
-               gui.binaries,
-               gui.zipfiles,
-               gui.datas,
-               strip=False,
-               upx=True,
-               upx_exclude=[],
-               name='Tracking GUI')
+# gui_coll = COLLECT(gui_exe,
+#                gui.binaries,
+#                gui.zipfiles,
+#                gui.datas,
+#                strip=False,
+#                upx=True,
+#                upx_exclude=[],
+#                name='Tracking GUI')
+
+merged_binaries = server.binaries + gui.binaries
+merged_zipfiles = server.zipfiles + gui.zipfiles
+merged_datas = server.datas + gui.datas  
+
+final_coll = COLLECT(server_exe,
+   gui_exe,
+   merged_binaries,
+   merged_zipfiles,
+   merged_datas,
+   strip=False,
+   upx=True,
+   upx_exclude=[],
+   name='Tracking System')

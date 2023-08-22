@@ -2,7 +2,7 @@ import time
 from fastapi import WebSocket, APIRouter
 from starlette.websockets import WebSocketDisconnect
 from tool.payloads import *
-from BirdDog_TrackingModule import DetectionWidget, tracker_main
+from BirdDog_TrackingModule import DetectionMananger, tracker_main
 from PySide2.QtCore import QDataStream, QByteArray, QIODevice,QBuffer
 import numpy as np
 import cv2
@@ -36,7 +36,7 @@ manager = ConnectionManager()
 async def websocket_qt_endpoint(websocket: WebSocket):
     await manager.connect(websocket)
     frame = None
-    Tracker = DetectionWidget()
+    Tracker = DetectionMananger()
     allowedProcessingTime = .1
     timeStep = 0
     try:
@@ -123,7 +123,7 @@ async def websocket_endpoint(websocket: WebSocket):
     "Consume video data through websockets that are encoded in Pydantic Models and get Tracking Coordinates"
     await websocket.accept()
 
-    Tracker = DetectionWidget()
+    Tracker = DetectionMananger()
     try:
         while True:
             #Expects a Python pickled data

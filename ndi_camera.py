@@ -31,9 +31,6 @@ class ndi_camera:
             print("Sources Length: {}".format(len(self.sources)))
             print(f'Camera has URL address of {self.sources[0].url_address}')
 
-            
-    
-
     def find_ptz(self):
         #initiate this temp object for checking
         #TODO
@@ -96,5 +93,3 @@ class ndi_camera:
         ndi_source_obj = ndi.Source()
         ndi_source_obj.ndi_name = ndi_name
         return ndi_source_obj
-
-

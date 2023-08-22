@@ -1,21 +1,21 @@
 from PySide2.QtCore import QTextStream, QFile, QDateTime, QSize, Qt, QTimer,QRect, QThread, QObject, Signal, Slot, QAbstractNativeEventFilter, QAbstractEventDispatcher
-from PySide2.QtWidgets import (QShortcut, QApplication, QCheckBox, QComboBox, QGridLayout, QGroupBox, QHBoxLayout, QLabel, QBoxLayout, QProgressBar, QPushButton, QButtonGroup, QSlider, QStyleFactory, QTableWidget, QTabWidget, QTextEdit, QVBoxLayout, QWidget, QAbstractButton, QMainWindow, QAction, QMenu, QStyleOptionSlider, QStyle, QSpacerItem, QSizePolicy)
+from PySide2.QtWidgets import (QShortcut, QApplication, QCheckBox, QComboBox, QGridLayout, QGroupBox, QHBoxLayout, QLabel, QBoxLayout, QProgressBar, QPushButton, QButtonGroup, QSlider, QRadioButton, QTableWidget, QTabWidget, QTextEdit, QVBoxLayout, QWidget, QAbstractButton, QMainWindow, QAction, QMenu, QStyleOptionSlider, QStyle, QSpacerItem, QSizePolicy)
 from PySide2.QtGui import QKeySequence, QImage, QPixmap, QPainter, QBrush, QFont, QIcon
 from ndi_camera import ndi_camera
 from tool.info_logging import add_logger
 import numpy as np
 import NDIlib as ndi
-import cv2, time, styling, sys, os, struct, requests, warnings, argparse, logging, pickle
+import cv2, time, sys, os, requests, warnings, argparse, logging, pickle
 from tool.custom_widgets import *
 from config import CONFIG
 from tool.pipeclient import PipeClient 
 from tool.payloads import *
 from tool.utils import str2bool
 from tool.pyqtkeybind import keybinder
-from multiprocessing import Process
-import debugpy
-debugpy.listen(("localhost", 5678))
-debugpy.wait_for_client()
+if not CONFIG.getboolean('server', 'production'):
+    import debugpy
+    debugpy.listen(("localhost", 5678))
+    debugpy.wait_for_client()
 
 class WinEventFilter(QAbstractNativeEventFilter):
     def __init__(self, keybinder):
@@ -25,14 +25,6 @@ class WinEventFilter(QAbstractNativeEventFilter):
     def nativeEventFilter(self,eventType, message):
         ret = self.keybinder.handler(eventType, message)
         return ret, 0
-
-# #Setup Logging
-# def handle_exception(exc_type, exc_value, exc_traceback):
-#     if issubclass(exc_type, KeyboardInterrupt):
-#         sys.__excepthook__(exc_type, exc_value, exc_traceback)
-#         return
-#     logger.error("Uncaught exception", exc_info=(exc_type, exc_value, exc_traceback))
-# sys.excepthook = handle_exception
 
 class MainWindow(QMainWindow):
     signalStatus = Signal(str)
@@ -84,7 +76,6 @@ class MainWindow(QMainWindow):
 
     def _connectSignals(self):
         self.signalStatus.connect(self.gui.updateStatus)
-        self.track_type_signal.connect(self.person_detector.set_track_type)
         self.sources.aboutToShow.connect(self.camera.findSources)
         self.sources.aboutToShow.connect(self.camera_thread.start)
         #self.aboutToQuit.connect(self.forceWorkerQuit)
@@ -107,7 +98,12 @@ class MainWindow(QMainWindow):
             entry = self.sources.addAction(item)
             entry.triggered.connect(self.camera.connect_to_camera) 
         entry.triggered.connect(self.vid_worker.stop_read_video)
-
+        
+    @Slot(int)
+    def handle_track_type_toggle(self, button):
+        index = self.gui.toggle_button_group.id(button)
+        self.track_type_signal.emit(index)
+        
     ### SIGNALS
     def createThreads(self):
         self.camera = CameraObject(args = self.args)
@@ -158,6 +154,8 @@ class MainWindow(QMainWindow):
 
         self.preset_camera_signal.connect(self.camera.connect_to_preset_camera)
         self.gui.face_track_button.clicked.connect(lambda state: self.camera.camera_control(0.0,0.0))
+        self.gui.toggle_button_group.buttonClicked.connect(self.handle_track_type_toggle)
+        self.track_type_signal.connect(self.person_detector.set_track_type)
 
     def forceWorkerQuit(self):
         if self.camera_thread.isRunning():
@@ -358,13 +356,24 @@ class WindowGUI(QWidget):
         adv_options_group.setCheckable(True)
         adv_options_group.setChecked(False)
         adv_options_layout.setSpacing(7)
+        
+        # 3-mode toggle switch
+        self.toggle_buttons = [QRadioButton(option) for option in ['face', 'person', 'fallback']]
+        self.toggle_button_group = QButtonGroup(self)
+        self.toggle_layout = QHBoxLayout()  # Layout for the toggle switch
+        for idx, btn in enumerate(self.toggle_buttons):
+            self.toggle_button_group.addButton(btn, idx)
+            self.toggle_layout.addWidget(btn)
+        self.toggle_buttons[0].setChecked(True)  # Set default selection
+        adv_options_layout.addLayout(self.toggle_layout, 4, 1, 1, 2)  # Added this line
+
         adv_options_layout.addWidget(gamma_label, 1,1)
         adv_options_layout.addWidget(x_minE_label, 2,1)
         adv_options_layout.addWidget(y_minE_label, 3,1)
         adv_options_layout.addWidget(self.gamma_slider,1,2)
         adv_options_layout.addWidget(self.x_minE_slider,2,2)
         adv_options_layout.addWidget(self.y_minE_slider,3,2) 
-        adv_options_layout.addWidget(self.reset_default_button,4,2) 
+        adv_options_layout.addWidget(self.reset_default_button,5,2) 
         adv_options_group.setLayout(adv_options_layout)
         controls_layout.addWidget(adv_options_group,2,1)
 
@@ -375,7 +384,7 @@ class WindowGUI(QWidget):
         bottom_info_layout.addWidget(self.speed_label)
         bottom_info_layout.addWidget(self.fps_label)
         layout.addLayout(bottom_info_layout)
-
+         
     @Slot(str)
     def updateStatus(self, status):
         self.label_status.setText(status)
@@ -421,6 +430,14 @@ class WindowGUI(QWidget):
         self.y_enable_button.setEnabled(True)
         self.azoom_lost_face_button.setEnabled(True)
         self.zoom_slider.setEnabled(True)
+    
+    @Slot()
+    def update_toggle_button_styles(self):
+        for i, btn in enumerate(self.toggle_buttons):
+            if btn.isChecked():
+                btn.setStyleSheet("background-color: green; color: white; font-weight: bold;")  # Highlighted style
+            else:
+                btn.setStyleSheet("background-color: none; color: black; font-weight: normal;")  # Normal style
 
 class CameraObject(QObject):
     """
@@ -593,9 +610,8 @@ class Video_Object(QObject):
             Repeat (int, optional): Number of times to send the vectors to the NDI. Defaults to 2.
         """
         for i in range(1,repeat):
-            #print(f'Camera Control X:{Xspeed}  Y:{Yspeed} Repeat:{i}')
+            print(f"AT@X at CAMERA_CONTROL:{Xspeed} Y:{Yspeed}")
             ndi.recv_ptz_pan_tilt_speed(self.ndi_recv, Xspeed, Yspeed)
-        ndi.recv_ptz_pan_tilt_speed(self.ndi_recv, 0, 0)
 
     @Slot(float)
     def zoom_camera_control(self, zoom_value):
@@ -614,6 +630,7 @@ class DetectionWidget(QObject):
     CameraZoomControlSignal = Signal(float)
     signalStatus = Signal(str)
     info_status = Signal(str)
+    TrackStateSignal = Signal(int)
     
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -629,7 +646,7 @@ class DetectionWidget(QObject):
         self.center_coords = (FRAME_WIDTH//2, FRAME_HEIGHT//2)
         self.reset_trigger = False
         self.track_type = 0
-        
+        #debugpy.breakpoint()
 
     @Slot(np.ndarray)
     def server_transact(self, frame):
@@ -638,8 +655,7 @@ class DetectionWidget(QObject):
         Args:
         frame (np.ndarray): image frame sent to the server,
         """
-        #Sending using Pydantic payloads
-        #debugpy.breakpoint()
+        #Sending using Pydantic payloads            
         parameter_payload = PipeClient_Parameter_Payload(target_coordinate_x = self.center_coords[0],
             target_coordinate_y = self.center_coords[1],
             track_type = self.track_type,
@@ -650,7 +666,7 @@ class DetectionWidget(QObject):
             y_track_state = self.y_track_state,
             autozoom_state = self.autozoom_state,
             reset_trigger = self.reset_trigger)
-
+        
         self.pipeClient.writeToPipe(payload = parameter_payload.pickle_object())
         
         #image_payload = PipeClient_Image_Payload(frame = jpeg.encode(frame))
@@ -667,17 +683,19 @@ class DetectionWidget(QObject):
             response = None
         else:
             response = pickle.loads(response_pickled)
-    
-        #print(f'Response from pipe is {response} meme')
-        
+
         #Display frame
-        if response and response.x is not None:
-            bB = [response.x, response.y, response.w, response.h]
-            boundingBox = (bB[0],bB[1],bB[2]-bB[0],bB[3]-bB[1])
+        if response:
             # Emit the signal of the x_velocity and y_velocity via the CameraControlSignal
             self.CameraControlSignal.emit(response.x_velocity, response.y_velocity)
-        else:
+            print(f"AT@X at SERVER_TRANSACT:{response.x_velocity} Y:{response.y_velocity}")
+
+            
+        if response and response.x:
+            boundingBox = [response.x, response.y, response.w, response.h]
+        else:        
             boundingBox = None
+
         self.displayFrame(frame, boundingBox)
 
 
@@ -775,6 +793,7 @@ class DetectionWidget(QObject):
 
     @Slot(int)
     def set_track_type(self, track_type):
+        # debugpy.breakpoint()
         self.track_type = track_type
 
 def parse_args(argv=None):
