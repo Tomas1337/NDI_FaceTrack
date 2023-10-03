@@ -159,7 +159,7 @@ tornado==6.1
 tqdm==4.61.2
 traitlets==5.0.5
 typing-extensions==3.7.4.3
-urllib3==1.26.6
+urllib3==1.26.17
 varname==0.7.1
 vincenty==0.1.4
 vine==5.0.0
